@@ -1,0 +1,1119 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0a0a0a" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="GPS Dyno" />
+  <meta name="description" content="Misura la curva di potenza della tua auto con il GPS" />
+  <title>GPS Dyno</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icon-192.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@300;400;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --red: #ff2020;
+      --orange: #ff6b00;
+      --yellow: #ffd000;
+      --green: #00ff88;
+      --cyan: #00e5ff;
+      --bg: #0a0a0a;
+      --bg2: #111111;
+      --bg3: #1a1a1a;
+      --border: #2a2a2a;
+      --text: #e8e8e8;
+      --muted: #666;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+      min-height: 100dvh;
+      overflow-x: hidden;
+    }
+
+    /* ── HEADER ── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px 12px;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(180deg, #111 0%, #0a0a0a 100%);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .logo {
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 900;
+      font-size: 22px;
+      letter-spacing: 3px;
+      color: var(--red);
+      text-shadow: 0 0 20px rgba(255,32,32,0.5);
+    }
+    .logo span { color: var(--text); }
+    .gps-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 1px;
+    }
+    .gps-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--muted);
+      transition: background 0.3s, box-shadow 0.3s;
+    }
+    .gps-dot.active { background: var(--green); box-shadow: 0 0 8px var(--green); }
+    .gps-dot.measuring { background: var(--yellow); box-shadow: 0 0 8px var(--yellow); animation: blink 0.5s infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+    /* ── NAV TABS ── */
+    nav {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg2);
+    }
+    nav button {
+      flex: 1;
+      padding: 12px 4px;
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-family: 'Orbitron', sans-serif;
+      font-size: 9px;
+      letter-spacing: 1.5px;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+      text-transform: uppercase;
+    }
+    nav button.active {
+      color: var(--red);
+      border-bottom-color: var(--red);
+    }
+
+    /* ── PAGES ── */
+    .page { display: none; padding: 20px; }
+    .page.active { display: block; }
+
+    /* ── GAUGE GRID ── */
+    .gauge-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .gauge-card {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px;
+      position: relative;
+      overflow: hidden;
+    }
+    .gauge-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--accent, var(--red));
+      box-shadow: 0 0 8px var(--accent, var(--red));
+    }
+    .gauge-label {
+      font-size: 9px;
+      color: var(--muted);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .gauge-value {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 28px;
+      font-weight: 700;
+      line-height: 1;
+      color: var(--accent, var(--red));
+    }
+    .gauge-unit {
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 4px;
+      letter-spacing: 1px;
+    }
+    .gauge-card.speed { --accent: var(--cyan); }
+    .gauge-card.accel { --accent: var(--orange); }
+    .gauge-card.power { --accent: var(--red); }
+    .gauge-card.torque { --accent: var(--yellow); }
+
+    /* ── SPEED BAR ── */
+    .speed-bar-wrap {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+    .speed-bar-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      color: var(--muted);
+      letter-spacing: 1px;
+      margin-bottom: 10px;
+    }
+    .speed-bar-track {
+      height: 8px;
+      background: #1e1e1e;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .speed-bar-fill {
+      height: 100%;
+      width: 0%;
+      border-radius: 4px;
+      background: linear-gradient(90deg, var(--cyan), var(--red));
+      transition: width 0.3s ease;
+      box-shadow: 0 0 10px var(--red);
+    }
+
+    /* ── BIG CONTROL BUTTON ── */
+    .controls {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .btn-main {
+      width: 100%;
+      padding: 20px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-transform: uppercase;
+      position: relative;
+      overflow: hidden;
+    }
+    .btn-main.start {
+      background: linear-gradient(135deg, #ff2020, #ff6b00);
+      color: white;
+      box-shadow: 0 4px 20px rgba(255,32,32,0.4);
+    }
+    .btn-main.stop {
+      background: linear-gradient(135deg, #333, #1a1a1a);
+      color: var(--red);
+      border: 1px solid var(--red);
+    }
+    .btn-main:active { transform: scale(0.97); }
+    .btn-secondary {
+      width: 100%;
+      padding: 14px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 11px;
+      letter-spacing: 2px;
+      background: var(--bg3);
+      color: var(--muted);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      cursor: pointer;
+      text-transform: uppercase;
+    }
+
+    /* ── INFO BOX ── */
+    .info-box {
+      background: rgba(0,229,255,0.05);
+      border: 1px solid rgba(0,229,255,0.15);
+      border-radius: 8px;
+      padding: 14px;
+      font-size: 11px;
+      color: #aaa;
+      line-height: 1.7;
+      letter-spacing: 0.3px;
+    }
+    .info-box strong { color: var(--cyan); }
+
+    /* ── CHART PAGE ── */
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 16px;
+    }
+    .chart-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 13px;
+      letter-spacing: 2px;
+      color: var(--text);
+    }
+    .chart-subtitle { font-size: 10px; color: var(--muted); margin-top: 4px; letter-spacing: 1px; }
+    .peak-badges {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      align-items: flex-end;
+    }
+    .badge {
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 1px;
+    }
+    .badge.power { background: rgba(255,32,32,0.15); color: var(--red); border: 1px solid var(--red); }
+    .badge.torque { background: rgba(255,208,0,0.15); color: var(--yellow); border: 1px solid var(--yellow); }
+
+    canvas#dynoChart {
+      width: 100%;
+      max-height: 280px;
+      border-radius: 8px;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      display: block;
+    }
+
+    .no-data {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--muted);
+    }
+    .no-data-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.4; }
+    .no-data p { font-size: 11px; letter-spacing: 1px; line-height: 1.8; }
+
+    /* ── CAR DATABASE PAGE ── */
+    .section-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 11px;
+      letter-spacing: 2px;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+    .car-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
+    .car-item {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+    .car-item.selected { border-color: var(--red); }
+    .car-item.selected .car-name { color: var(--red); }
+    .car-name { font-size: 13px; font-weight: 600; letter-spacing: 0.5px; }
+    .car-details { font-size: 10px; color: var(--muted); margin-top: 3px; letter-spacing: 0.5px; }
+    .car-mass { font-family: 'Orbitron', sans-serif; font-size: 14px; color: var(--cyan); }
+    .car-mass-unit { font-size: 9px; color: var(--muted); }
+
+    .add-car-form {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+    .form-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 11px;
+      letter-spacing: 2px;
+      color: var(--cyan);
+      margin-bottom: 14px;
+    }
+    .form-row { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+    .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+    label { font-size: 9px; color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 4px; display: block; }
+    input, select {
+      width: 100%;
+      background: #0f0f0f;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 12px;
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      outline: none;
+      -webkit-appearance: none;
+    }
+    input:focus, select:focus { border-color: var(--cyan); }
+    .btn-add {
+      width: 100%;
+      padding: 14px;
+      background: rgba(0,229,255,0.1);
+      border: 1px solid var(--cyan);
+      color: var(--cyan);
+      border-radius: 8px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 11px;
+      letter-spacing: 2px;
+      cursor: pointer;
+      text-transform: uppercase;
+    }
+
+    /* ── RESULTS PAGE ── */
+    .result-card {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+    .result-label { font-size: 10px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 8px; }
+    .result-value {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 36px;
+      font-weight: 900;
+      color: var(--red);
+    }
+    .result-unit { font-size: 14px; color: var(--muted); margin-left: 4px; }
+    .result-sub { font-size: 10px; color: var(--muted); margin-top: 4px; }
+
+    .run-list { display: flex; flex-direction: column; gap: 8px; }
+    .run-item {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+    }
+    .run-item:active { border-color: var(--red); }
+    .run-date { font-size: 10px; color: var(--muted); }
+    .run-peak { font-family: 'Orbitron', sans-serif; font-size: 13px; color: var(--red); }
+
+    /* ── FOOTER ── */
+    .disclaimer {
+      margin: 24px 0 8px;
+      font-size: 9px;
+      color: #444;
+      text-align: center;
+      line-height: 1.7;
+      letter-spacing: 0.5px;
+    }
+
+    /* ── RECORDING ANIMATION ── */
+    .rec-indicator {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255,32,32,0.1);
+      border: 1px solid rgba(255,32,32,0.3);
+      border-radius: 6px;
+      padding: 10px 14px;
+      margin-bottom: 16px;
+      font-size: 11px;
+      color: var(--red);
+      letter-spacing: 1px;
+    }
+    .rec-indicator.visible { display: flex; }
+    .rec-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--red); animation: blink 1s infinite; }
+
+    /* ── SCROLLBAR ── */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">GPS<span>DYNO</span></div>
+  <div class="gps-status">
+    <div class="gps-dot" id="gpsDot"></div>
+    <span id="gpsLabel">NO GPS</span>
+  </div>
+</header>
+
+<nav>
+  <button class="active" onclick="showPage('measure')">⚡ MISURA</button>
+  <button onclick="showPage('chart')">📈 CURVA</button>
+  <button onclick="showPage('runs')">🏁 RUNS</button>
+  <button onclick="showPage('cars')">🚗 AUTO</button>
+</nav>
+
+<!-- ═══ PAGE: MEASURE ═══ -->
+<div class="page active" id="page-measure">
+
+  <div class="rec-indicator" id="recIndicator">
+    <div class="rec-dot"></div>
+    REGISTRAZIONE IN CORSO — <span id="recTime">0.0s</span>
+  </div>
+
+  <div class="gauge-grid">
+    <div class="gauge-card speed">
+      <div class="gauge-label">VELOCITÀ</div>
+      <div class="gauge-value" id="gaugeSpeed">0</div>
+      <div class="gauge-unit">km/h</div>
+    </div>
+    <div class="gauge-card accel">
+      <div class="gauge-label">ACCEL.</div>
+      <div class="gauge-value" id="gaugeAccel">0.00</div>
+      <div class="gauge-unit">m/s²</div>
+    </div>
+    <div class="gauge-card power">
+      <div class="gauge-label">POTENZA</div>
+      <div class="gauge-value" id="gaugePower">—</div>
+      <div class="gauge-unit">CV (PS)</div>
+    </div>
+    <div class="gauge-card torque">
+      <div class="gauge-label">COPPIA</div>
+      <div class="gauge-value" id="gaugeTorque">—</div>
+      <div class="gauge-unit">Nm</div>
+    </div>
+  </div>
+
+  <div class="speed-bar-wrap">
+    <div class="speed-bar-label">
+      <span>0 km/h</span>
+      <span id="speedBarVal">0 km/h</span>
+      <span>250 km/h</span>
+    </div>
+    <div class="speed-bar-track">
+      <div class="speed-bar-fill" id="speedBar"></div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="btn-main start" id="mainBtn" onclick="toggleMeasure()">▶ AVVIA MISURA</button>
+    <button class="btn-secondary" onclick="resetSession()">↺ RESET SESSION</button>
+  </div>
+
+  <div class="info-box">
+    <strong>AUTO SELEZIONATA:</strong> <span id="selectedCarInfo">Nessuna — vai su AUTO</span><br />
+    <strong>METODO:</strong> GPS + accelerazione · P = F×v · F = m×a<br />
+    <strong>NOTE:</strong> Esegui l'accelerazione su rettilineo in 3ª/4ª marcia da 30 a 130 km/h
+  </div>
+
+  <div class="disclaimer">
+    ⚠ Usa solo in condizioni di sicurezza. Rispetta il codice della strada.<br />
+    I valori includono perdite meccaniche (stima drivetrain ~15%).
+  </div>
+</div>
+
+<!-- ═══ PAGE: CHART ═══ -->
+<div class="page" id="page-chart">
+  <div id="chartWrap">
+    <div class="no-data">
+      <div class="no-data-icon">📊</div>
+      <p>Nessun dato disponibile.<br />Esegui una misurazione<br />nella scheda MISURA.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ PAGE: RUNS ═══ -->
+<div class="page" id="page-runs">
+  <div class="section-title">SESSIONI SALVATE</div>
+  <div class="run-list" id="runList">
+    <div class="no-data">
+      <div class="no-data-icon">🏁</div>
+      <p>Nessuna sessione ancora.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ PAGE: CARS ═══ -->
+<div class="page" id="page-cars">
+
+  <div class="section-title">DATABASE AUTO</div>
+  <div class="car-list" id="carList"></div>
+
+  <div class="add-car-form">
+    <div class="form-title">+ AGGIUNGI AUTO</div>
+    <div class="form-row">
+      <label>Marca</label>
+      <input type="text" id="carMake" placeholder="es. BMW" />
+    </div>
+    <div class="form-row-2">
+      <div>
+        <label>Modello</label>
+        <input type="text" id="carModel" placeholder="es. M3" />
+      </div>
+      <div>
+        <label>Anno</label>
+        <input type="number" id="carYear" placeholder="2023" min="1950" max="2099" />
+      </div>
+    </div>
+    <div class="form-row-2">
+      <div>
+        <label>Massa (kg)</label>
+        <input type="number" id="carMass" placeholder="1500" min="500" max="5000" />
+      </div>
+      <div>
+        <label>Trazione</label>
+        <select id="carDrive">
+          <option value="RWD">RWD</option>
+          <option value="FWD">FWD</option>
+          <option value="AWD">AWD</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <label>CV dichiarati (opzionale)</label>
+      <input type="number" id="carHp" placeholder="es. 400" min="20" max="2000" />
+    </div>
+    <button class="btn-add" onclick="addCar()">AGGIUNGI AL DATABASE</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════
+let state = {
+  measuring: false,
+  gpsActive: false,
+  watchId: null,
+  lastPos: null,
+  lastTime: null,
+  speed: 0,        // m/s
+  accel: 0,        // m/s²
+  dataPoints: [],  // { speed_kmh, accel, power_cv, torque_nm, timestamp }
+  sessionStartTime: null,
+  selectedCar: null,
+  cars: [],
+  runs: [],
+};
+
+// ═══════════════════════════════════════════
+// PERSISTENCE
+// ═══════════════════════════════════════════
+function save() {
+  localStorage.setItem('gpsdyno_cars', JSON.stringify(state.cars));
+  localStorage.setItem('gpsdyno_runs', JSON.stringify(state.runs));
+}
+
+function load() {
+  try {
+    state.cars = JSON.parse(localStorage.getItem('gpsdyno_cars') || '[]');
+    state.runs = JSON.parse(localStorage.getItem('gpsdyno_runs') || '[]');
+  } catch(e) {}
+  if (state.cars.length === 0) seedDefaultCars();
+}
+
+function seedDefaultCars() {
+  state.cars = [
+    { id: 1, make: 'VW', model: 'Golf GTI', year: 2021, mass: 1340, drive: 'FWD', hp: 245 },
+    { id: 2, make: 'BMW', model: '330i', year: 2022, mass: 1540, drive: 'RWD', hp: 258 },
+    { id: 3, make: 'Fiat', model: 'Punto 1.2', year: 2008, mass: 1020, drive: 'FWD', hp: 65 },
+    { id: 4, make: 'Audi', model: 'RS6', year: 2023, mass: 2075, drive: 'AWD', hp: 600 },
+  ];
+  save();
+}
+
+// ═══════════════════════════════════════════
+// PAGE NAVIGATION
+// ═══════════════════════════════════════════
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  event.target.classList.add('active');
+  if (id === 'chart') renderChart();
+  if (id === 'cars') renderCarList();
+  if (id === 'runs') renderRunList();
+}
+
+// ═══════════════════════════════════════════
+// GPS
+// ═══════════════════════════════════════════
+function startGPS() {
+  if (!('geolocation' in navigator)) {
+    alert('GPS non disponibile su questo dispositivo.');
+    return;
+  }
+  state.watchId = navigator.geolocation.watchPosition(onGPSUpdate, onGPSError, {
+    enableHighAccuracy: true,
+    maximumAge: 0,
+    timeout: 5000,
+  });
+}
+
+function stopGPS() {
+  if (state.watchId !== null) {
+    navigator.geolocation.clearWatch(state.watchId);
+    state.watchId = null;
+  }
+  setGPSStatus('inactive');
+}
+
+function onGPSUpdate(pos) {
+  const now = pos.timestamp;
+  const spd = pos.coords.speed || 0; // m/s
+  const acc = pos.coords.accuracy;
+
+  setGPSStatus(state.measuring ? 'measuring' : 'active');
+
+  const speedKmh = spd * 3.6;
+  let accel = 0;
+
+  if (state.lastPos && state.lastTime) {
+    const dt = (now - state.lastTime) / 1000;
+    if (dt > 0 && dt < 3) {
+      accel = (spd - state.speed) / dt;
+    }
+  }
+
+  state.speed = spd;
+  state.accel = accel;
+  state.lastPos = pos;
+  state.lastTime = now;
+
+  // Update gauges
+  document.getElementById('gaugeSpeed').textContent = speedKmh.toFixed(0);
+  document.getElementById('gaugeAccel').textContent = accel.toFixed(2);
+  document.getElementById('speedBar').style.width = Math.min(speedKmh / 250 * 100, 100) + '%';
+  document.getElementById('speedBarVal').textContent = speedKmh.toFixed(0) + ' km/h';
+
+  // Calculate power if car selected
+  if (state.selectedCar && accel > 0.3) {
+    const result = calcPower(spd, accel, state.selectedCar.mass);
+    document.getElementById('gaugePower').textContent = result.cv.toFixed(0);
+    document.getElementById('gaugeTorque').textContent = result.torque.toFixed(0);
+
+    if (state.measuring && speedKmh >= 20 && speedKmh <= 250) {
+      state.dataPoints.push({
+        speed_kmh: speedKmh,
+        accel: accel,
+        power_cv: result.cv,
+        torque_nm: result.torque,
+        timestamp: now,
+      });
+    }
+  } else if (!state.selectedCar) {
+    document.getElementById('gaugePower').textContent = '—';
+    document.getElementById('gaugeTorque').textContent = '—';
+  }
+}
+
+function onGPSError(err) {
+  setGPSStatus('inactive');
+  console.warn('GPS error', err);
+}
+
+function setGPSStatus(s) {
+  const dot = document.getElementById('gpsDot');
+  const lbl = document.getElementById('gpsLabel');
+  dot.className = 'gps-dot';
+  if (s === 'active') { dot.classList.add('active'); lbl.textContent = 'GPS OK'; }
+  else if (s === 'measuring') { dot.classList.add('measuring'); lbl.textContent = 'REC'; }
+  else { lbl.textContent = 'NO GPS'; }
+  state.gpsActive = s !== 'inactive';
+}
+
+// ═══════════════════════════════════════════
+// PHYSICS
+// ═══════════════════════════════════════════
+const DRIVETRAIN_LOSS = 0.15; // 15% frictional losses
+const AERO_CD = 0.30;
+const FRONTAL_AREA = 2.2;  // m²
+const AIR_DENSITY = 1.225; // kg/m³
+const ROLLING_COEFF = 0.013;
+const G = 9.81;
+
+function calcPower(speed_ms, accel_ms2, mass_kg) {
+  // Net force = m * a
+  const F_net = mass_kg * accel_ms2;
+  // Aero drag
+  const F_aero = 0.5 * AIR_DENSITY * AERO_CD * FRONTAL_AREA * speed_ms * speed_ms;
+  // Rolling resistance
+  const F_roll = ROLLING_COEFF * mass_kg * G;
+  // Total force at wheels
+  const F_total = F_net + F_aero + F_roll;
+  // Power at wheels
+  const P_wheels = F_total * speed_ms; // Watts
+  // Correct for drivetrain losses → engine power
+  const P_engine = P_wheels / (1 - DRIVETRAIN_LOSS);
+  const cv = P_engine / 735.499; // 1 CV = 735.499 W
+  // Torque (approximated at current speed, no RPM)
+  // We store torque as engine force proxy: T = P/ω but we don't have RPM
+  // Use wheel torque: T_wheel = F_total * r_wheel
+  const r_wheel = 0.31; // m
+  const torque = F_total * r_wheel;
+  return { cv: Math.max(cv, 0), torque: Math.max(torque, 0), P_kw: P_engine / 1000 };
+}
+
+// ═══════════════════════════════════════════
+// MEASURE CONTROL
+// ═══════════════════════════════════════════
+let recTimer = null;
+
+function toggleMeasure() {
+  if (!state.selectedCar) {
+    alert('Seleziona prima un\'auto nella scheda AUTO');
+    return;
+  }
+  if (!state.gpsActive) {
+    startGPS();
+    setTimeout(() => {
+      if (!state.gpsActive) alert('In attesa del GPS... Riprova tra qualche secondo.');
+    }, 2000);
+    return;
+  }
+
+  if (!state.measuring) {
+    state.measuring = true;
+    state.dataPoints = [];
+    state.sessionStartTime = Date.now();
+    document.getElementById('mainBtn').textContent = '⏹ FERMA MISURA';
+    document.getElementById('mainBtn').classList.remove('start');
+    document.getElementById('mainBtn').classList.add('stop');
+    document.getElementById('recIndicator').classList.add('visible');
+    recTimer = setInterval(() => {
+      const elapsed = (Date.now() - state.sessionStartTime) / 1000;
+      document.getElementById('recTime').textContent = elapsed.toFixed(1) + 's';
+    }, 100);
+    setGPSStatus('measuring');
+  } else {
+    stopMeasure();
+  }
+}
+
+function stopMeasure() {
+  state.measuring = false;
+  clearInterval(recTimer);
+  document.getElementById('mainBtn').textContent = '▶ AVVIA MISURA';
+  document.getElementById('mainBtn').classList.remove('stop');
+  document.getElementById('mainBtn').classList.add('start');
+  document.getElementById('recIndicator').classList.remove('visible');
+  setGPSStatus('active');
+
+  if (state.dataPoints.length > 5) {
+    saveRun();
+    showPage_noEvent('chart');
+  } else {
+    alert('Dati insufficienti. Accelera più a lungo (almeno 5 secondi).');
+  }
+}
+
+function showPage_noEvent(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach((b, i) => {
+    b.classList.remove('active');
+    const pages = ['measure','chart','runs','cars'];
+    if (pages[i] === id) b.classList.add('active');
+  });
+  document.getElementById('page-' + id).classList.add('active');
+  if (id === 'chart') renderChart();
+}
+
+function resetSession() {
+  state.dataPoints = [];
+  document.getElementById('gaugePower').textContent = '—';
+  document.getElementById('gaugeTorque').textContent = '—';
+  document.getElementById('gaugeSpeed').textContent = '0';
+  document.getElementById('gaugeAccel').textContent = '0.00';
+}
+
+// ═══════════════════════════════════════════
+// RUNS
+// ═══════════════════════════════════════════
+function saveRun() {
+  const smooth = smoothData(state.dataPoints);
+  const peaks = getPeaks(smooth);
+  const run = {
+    id: Date.now(),
+    date: new Date().toLocaleString('it-IT'),
+    car: state.selectedCar,
+    points: smooth,
+    peakPower: peaks.power,
+    peakTorque: peaks.torque,
+    peakSpeed: peaks.speed,
+    duration: (Date.now() - state.sessionStartTime) / 1000,
+  };
+  state.runs.unshift(run);
+  save();
+}
+
+function smoothData(points) {
+  if (points.length < 3) return points;
+  // Sort by speed
+  const sorted = [...points].sort((a, b) => a.speed_kmh - b.speed_kmh);
+  // Bin into 2 km/h buckets
+  const bins = {};
+  for (const p of sorted) {
+    const k = Math.round(p.speed_kmh / 2) * 2;
+    if (!bins[k]) bins[k] = [];
+    bins[k].push(p);
+  }
+  const result = [];
+  for (const [k, pts] of Object.entries(bins)) {
+    const avg = arr => arr.reduce((s, v) => s + v, 0) / arr.length;
+    result.push({
+      speed_kmh: parseFloat(k),
+      power_cv: avg(pts.map(p => p.power_cv)),
+      torque_nm: avg(pts.map(p => p.torque_nm)),
+      accel: avg(pts.map(p => p.accel)),
+    });
+  }
+  return result.sort((a, b) => a.speed_kmh - b.speed_kmh);
+}
+
+function getPeaks(points) {
+  let maxP = 0, maxT = 0, maxS = 0;
+  for (const p of points) {
+    if (p.power_cv > maxP) { maxP = p.power_cv; maxS = p.speed_kmh; }
+    if (p.torque_nm > maxT) maxT = p.torque_nm;
+  }
+  return { power: maxP, torque: maxT, speed: maxS };
+}
+
+function renderRunList() {
+  const el = document.getElementById('runList');
+  if (state.runs.length === 0) {
+    el.innerHTML = '<div class="no-data"><div class="no-data-icon">🏁</div><p>Nessuna sessione ancora.</p></div>';
+    return;
+  }
+  el.innerHTML = state.runs.map((r, i) => `
+    <div class="run-item" onclick="loadRun(${i})">
+      <div>
+        <div class="car-name">${r.car.make} ${r.car.model}</div>
+        <div class="run-date">${r.date} · ${r.duration.toFixed(1)}s</div>
+      </div>
+      <div>
+        <div class="run-peak">${r.peakPower.toFixed(0)} CV</div>
+        <div class="car-details" style="text-align:right">${r.peakTorque.toFixed(0)} Nm</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function loadRun(i) {
+  state.dataPoints = state.runs[i].points;
+  showPage_noEvent('chart');
+}
+
+// ═══════════════════════════════════════════
+// CHART
+// ═══════════════════════════════════════════
+function renderChart() {
+  const wrap = document.getElementById('chartWrap');
+
+  if (state.dataPoints.length < 3) {
+    wrap.innerHTML = '<div class="no-data"><div class="no-data-icon">📊</div><p>Nessun dato disponibile.<br />Esegui una misurazione<br />nella scheda MISURA.</p></div>';
+    return;
+  }
+
+  const smooth = state.dataPoints[0].speed_kmh !== undefined && state.dataPoints.some(p => p.speed_kmh)
+    ? (state.dataPoints[0].torque_nm !== undefined ? state.dataPoints : smoothData(state.dataPoints))
+    : smoothData(state.dataPoints);
+
+  const peaks = getPeaks(smooth);
+
+  wrap.innerHTML = `
+    <div class="chart-header">
+      <div>
+        <div class="chart-title">CURVA DI POTENZA</div>
+        <div class="chart-subtitle">${state.selectedCar ? state.selectedCar.make + ' ' + state.selectedCar.model : ''}</div>
+      </div>
+      <div class="peak-badges">
+        <div class="badge power">⚡ ${peaks.power.toFixed(0)} CV</div>
+        <div class="badge torque">🔩 ${peaks.torque.toFixed(0)} Nm</div>
+      </div>
+    </div>
+    <canvas id="dynoChart"></canvas>
+    <div style="display:flex;gap:20px;margin-top:12px;font-size:10px;color:var(--muted);letter-spacing:1px;">
+      <span><span style="color:var(--red)">●</span> POTENZA (CV)</span>
+      <span><span style="color:var(--yellow)">●</span> COPPIA (Nm)</span>
+    </div>
+  `;
+
+  const canvas = document.getElementById('dynoChart');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = (canvas.offsetWidth || 340) * dpr;
+  canvas.height = 260 * dpr;
+  canvas.style.height = '260px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  const W = canvas.width / dpr;
+  const H = canvas.height / dpr;
+  const pad = { top: 20, right: 20, bottom: 36, left: 52 };
+  const cW = W - pad.left - pad.right;
+  const cH = H - pad.top - pad.bottom;
+
+  const speeds = smooth.map(p => p.speed_kmh);
+  const powers = smooth.map(p => p.power_cv);
+  const torques = smooth.map(p => p.torque_nm);
+
+  const minSpd = Math.min(...speeds);
+  const maxSpd = Math.max(...speeds);
+  const maxPwr = Math.max(...powers) * 1.1;
+  const maxTrq = Math.max(...torques) * 1.1;
+
+  const xScale = spd => pad.left + ((spd - minSpd) / (maxSpd - minSpd || 1)) * cW;
+  const yScalePwr = cv => pad.top + cH - (cv / maxPwr) * cH;
+  const yScaleTrq = nm => pad.top + cH - (nm / maxTrq) * cH;
+
+  // Background
+  ctx.fillStyle = '#1a1a1a';
+  ctx.fillRect(0, 0, W, H);
+
+  // Grid
+  ctx.strokeStyle = '#2a2a2a';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.top + (cH / 4) * i;
+    ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(W - pad.right, y); ctx.stroke();
+  }
+
+  // Torque area fill
+  ctx.beginPath();
+  ctx.moveTo(xScale(speeds[0]), yScaleTrq(torques[0]));
+  for (let i = 1; i < smooth.length; i++) ctx.lineTo(xScale(speeds[i]), yScaleTrq(torques[i]));
+  ctx.lineTo(xScale(speeds[smooth.length - 1]), pad.top + cH);
+  ctx.lineTo(xScale(speeds[0]), pad.top + cH);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(255,208,0,0.07)';
+  ctx.fill();
+
+  // Power area fill
+  ctx.beginPath();
+  ctx.moveTo(xScale(speeds[0]), yScalePwr(powers[0]));
+  for (let i = 1; i < smooth.length; i++) ctx.lineTo(xScale(speeds[i]), yScalePwr(powers[i]));
+  ctx.lineTo(xScale(speeds[smooth.length - 1]), pad.top + cH);
+  ctx.lineTo(xScale(speeds[0]), pad.top + cH);
+  ctx.closePath();
+  const grad = ctx.createLinearGradient(0, pad.top, 0, pad.top + cH);
+  grad.addColorStop(0, 'rgba(255,32,32,0.3)');
+  grad.addColorStop(1, 'rgba(255,32,32,0.02)');
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Torque line
+  ctx.beginPath();
+  ctx.strokeStyle = '#ffd000';
+  ctx.lineWidth = 2;
+  ctx.shadowColor = '#ffd000';
+  ctx.shadowBlur = 6;
+  ctx.moveTo(xScale(speeds[0]), yScaleTrq(torques[0]));
+  for (let i = 1; i < smooth.length; i++) ctx.lineTo(xScale(speeds[i]), yScaleTrq(torques[i]));
+  ctx.stroke();
+
+  // Power line
+  ctx.beginPath();
+  ctx.strokeStyle = '#ff2020';
+  ctx.lineWidth = 2.5;
+  ctx.shadowColor = '#ff2020';
+  ctx.shadowBlur = 10;
+  ctx.moveTo(xScale(speeds[0]), yScalePwr(powers[0]));
+  for (let i = 1; i < smooth.length; i++) ctx.lineTo(xScale(speeds[i]), yScalePwr(powers[i]));
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  // Peak marker
+  const pkIdx = powers.indexOf(Math.max(...powers));
+  if (pkIdx >= 0) {
+    const px = xScale(speeds[pkIdx]);
+    const py = yScalePwr(powers[pkIdx]);
+    ctx.beginPath();
+    ctx.arc(px, py, 5, 0, Math.PI * 2);
+    ctx.fillStyle = '#ff2020';
+    ctx.shadowColor = '#ff2020';
+    ctx.shadowBlur = 12;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+
+  // Axes labels
+  ctx.fillStyle = '#666';
+  ctx.font = '10px JetBrains Mono, monospace';
+  ctx.textAlign = 'center';
+  // X axis — speed
+  const xSteps = 4;
+  for (let i = 0; i <= xSteps; i++) {
+    const spd = minSpd + ((maxSpd - minSpd) / xSteps) * i;
+    ctx.fillText(spd.toFixed(0), xScale(spd), H - 10);
+  }
+  ctx.fillStyle = '#555';
+  ctx.fillText('km/h', pad.left + cW / 2, H - 0);
+
+  // Y axis — power
+  ctx.textAlign = 'right';
+  for (let i = 0; i <= 4; i++) {
+    const val = (maxPwr / 4) * (4 - i);
+    ctx.fillStyle = '#ff4040';
+    ctx.fillText(val.toFixed(0), pad.left - 4, yScalePwr(val) + 4);
+  }
+}
+
+// ═══════════════════════════════════════════
+// CARS DATABASE
+// ═══════════════════════════════════════════
+function renderCarList() {
+  const el = document.getElementById('carList');
+  el.innerHTML = state.cars.map(car => `
+    <div class="car-item ${state.selectedCar && state.selectedCar.id === car.id ? 'selected' : ''}" onclick="selectCar(${car.id})">
+      <div>
+        <div class="car-name">${car.make} ${car.model} <span style="color:var(--muted);font-size:10px">(${car.year})</span></div>
+        <div class="car-details">${car.drive} · ${car.hp ? car.hp + ' CV dichiarati' : 'CV non specificati'}</div>
+      </div>
+      <div style="text-align:right">
+        <div class="car-mass">${car.mass}</div>
+        <div class="car-mass-unit">kg</div>
+      </div>
+    </div>
+  `).join('') || '<div class="no-data"><p>Nessuna auto nel database.</p></div>';
+}
+
+function selectCar(id) {
+  state.selectedCar = state.cars.find(c => c.id === id);
+  renderCarList();
+  document.getElementById('selectedCarInfo').textContent =
+    state.selectedCar ? `${state.selectedCar.make} ${state.selectedCar.model} · ${state.selectedCar.mass} kg` : 'Nessuna';
+  if (!state.gpsActive) startGPS();
+}
+
+function addCar() {
+  const make = document.getElementById('carMake').value.trim();
+  const model = document.getElementById('carModel').value.trim();
+  const year = parseInt(document.getElementById('carYear').value) || new Date().getFullYear();
+  const mass = parseFloat(document.getElementById('carMass').value);
+  const drive = document.getElementById('carDrive').value;
+  const hp = parseInt(document.getElementById('carHp').value) || null;
+
+  if (!make || !model || !mass || mass < 300) {
+    alert('Compila almeno: Marca, Modello e Massa (min 300 kg)');
+    return;
+  }
+
+  const car = { id: Date.now(), make, model, year, mass, drive, hp };
+  state.cars.push(car);
+  save();
+  renderCarList();
+
+  // Clear form
+  ['carMake','carModel','carYear','carMass','carHp'].forEach(id => document.getElementById(id).value = '');
+  alert(`${make} ${model} aggiunta al database!`);
+}
+
+// ═══════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════
+load();
+renderCarList();
+
+// Register service worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
