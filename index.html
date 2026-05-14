@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+<title>GPS Dyno Car Mode</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --bg:#050505;
+  --card:#101010;
+  --border:#222;
+  --red:#ff3030;
+  --green:#00ff99;
+  --cyan:#00e5ff;
+  --yellow:#ffd000;
+  --text:#f2f2f2;
+  --muted:#666;
+}
+
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+  -webkit-tap-highlight-color:transparent;
+}
+
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Orbitron',sans-serif;
+  overflow:hidden;
+}
+
+/* ───────────────────────────── */
+/* SAFETY OVERLAY */
+/* ───────────────────────────── */
+
+#safetyOverlay{
+  position:fixed;
+  inset:0;
+  background:#000;
+  z-index:99999;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+}
+
+.safety-card{
+  width:100%;
+  max-width:700px;
+  background:linear-gradient(180deg,#111,#090909);
+  border:1px solid #222;
+  border-radius:20px;
+  padding:32px;
+  box-shadow:0 0 50px rgba(255,0,0,.15);
+}
+
+.safety-title{
+  font-size:34px;
+  font-weight:900;
+  color:var(--red);
+  margin-bottom:18px;
+  letter-spacing:3px;
+}
+
+.safety-text{
+  line-height:1.9;
+  color:#bbb;
+  font-size:15px;
+}
+
+.warning-box{
+  margin-top:24px;
+  padding:18px;
+  border-radius:14px;
+  background:rgba(255,48,48,.08);
+  border:1px solid rgba(255,48,48,.2);
+}
+
+.checkbox-wrap{
+  margin-top:28px;
+  display:flex;
+  align-items:flex-start;
+  gap:14px;
+}
+
+.checkbox-wrap input{
+  width:22px;
+  height:22px;
+  margin-top:3px;
+}
+
+.checkbox-wrap label{
+  color:#ddd;
+  line-height:1.6;
+  font-size:14px;
+}
+
+#continueBtn{
+  width:100%;
+  margin-top:28px;
+  border:none;
+  border-radius:14px;
+  padding:18px;
+  font-family:'Orbitron',sans-serif;
+  font-size:15px;
+  font-weight:700;
+  letter-spacing:3px;
+  background:linear-gradient(135deg,var(--red),#ff7a00);
+  color:white;
+  cursor:pointer;
+  opacity:.4;
+  transition:.2s;
+}
+
+#continueBtn.enabled{
+  opacity:1;
+}
+
+/* ───────────────────────────── */
+/* CAR MODE */
+/* ───────────────────────────── */
+
+#carMode{
+  height:100vh;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+}
+
+.topbar{
+  position:absolute;
+  top:16px;
+  left:16px;
+  right:16px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+
+.logo{
+  font-size:18px;
+  font-weight:900;
+  color:var(--red);
+  letter-spacing:3px;
+}
+
+.mic-status{
+  font-size:12px;
+  color:var(--green);
+  letter-spacing:2px;
+}
+
+.main-layout{
+  width:100%;
+  max-width:1400px;
+  display:grid;
+  grid-template-columns:260px 1fr 260px;
+  gap:24px;
+  align-items:center;
+}
+
+.side-card{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:20px;
+  padding:28px;
+  text-align:center;
+}
+
+.side-label{
+  font-size:12px;
+  color:var(--muted);
+  letter-spacing:2px;
+  margin-bottom:14px;
+}
+
+.side-value{
+  font-size:52px;
+  font-weight:900;
+}
+
+.power{
+  color:var(--red);
+}
+
+.torque{
+  color:var(--yellow);
+}
+
+.side-unit{
+  margin-top:10px;
+  font-size:14px;
+  color:var(--muted);
+}
+
+.center-wrap{
+  position:relative;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+#tachometer{
+  width:100%;
+  max-width:760px;
+  aspect-ratio:1/1;
+}
+
+.center-data{
+  position:absolute;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  pointer-events:none;
+}
+
+.speed{
+  font-size:92px;
+  font-weight:900;
+  color:var(--cyan);
+  text-shadow:0 0 30px rgba(0,229,255,.4);
+  line-height:1;
+}
+
+.speed-unit{
+  margin-top:8px;
+  color:var(--muted);
+  font-size:14px;
+  letter-spacing:3px;
+}
+
+.gear{
+  margin-top:24px;
+  font-size:90px;
+  color:var(--green);
+  text-shadow:0 0 30px rgba(0,255,153,.35);
+  line-height:1;
+}
+
+.bottom-bar{
+  position:absolute;
+  bottom:16px;
+  left:16px;
+  right:16px;
+  display:flex;
+  justify-content:center;
+  gap:14px;
+  flex-wrap:wrap;
+}
+
+.bottom-pill{
+  background:rgba(255,255,255,.04);
+  border:1px solid var(--border);
+  padding:12px 18px;
+  border-radius:999px;
+  font-size:12px;
+  color:#aaa;
+  letter-spacing:1px;
+}
+
+.controls{
+  position:absolute;
+  right:18px;
+  top:90px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.ctrl{
+  border:none;
+  background:#111;
+  border:1px solid #222;
+  color:#ddd;
+  padding:12px 14px;
+  border-radius:12px;
+  cursor:pointer;
+  font-family:'Orbitron',sans-serif;
+}
+
+.ctrl:hover{
+  border-color:var(--cyan);
+}
+
+@media(max-width:1000px){
+
+  .main-layout{
+    grid-template-columns:1fr;
+  }
+
+  .side-card{
+    display:none;
+  }
+
+  .speed{
+    font-size:64px;
+  }
+
+  .gear{
+    font-size:70px;
+  }
+
+}
+</style>
+</head>
+
+<body>
+
+<!-- SAFETY -->
+
+<div id="safetyOverlay">
+
+  <div class="safety-card">
+
+    <div class="safety-title">
+      ⚠ ATTENZIONE
+    </div>
+
+    <div class="safety-text">
+      Questa applicazione è destinata esclusivamente all’uso in condizioni sicure e legali.
+      <br><br>
+      Non utilizzare il telefono durante la guida.
+      <br><br>
+      Interagisci con l’app solo da fermo oppure tramite display compatibili montati sul veicolo.
+      <br><br>
+      Rispetta sempre il codice della strada e presta attenzione all’ambiente circostante.
+    </div>
+
+    <div class="warning-box">
+      L’utente si assume ogni responsabilità relativa all’utilizzo dell’applicazione durante la guida.
+    </div>
+
+    <div class="checkbox-wrap">
+      <input type="checkbox" id="safetyCheck">
+      <label for="safetyCheck">
+        Ho letto e compreso l’avviso di sicurezza e utilizzerò l’applicazione in modo responsabile.
+      </label>
+    </div>
+
+    <button id="continueBtn">
+      CONTINUA
+    </button>
+
+  </div>
+
+</div>
+
+<!-- CAR MODE -->
+
+<div id="carMode">
+
+  <div class="topbar">
+    <div class="logo">GPS DYNO // CAR MODE</div>
+    <div class="mic-status" id="micStatus">
+      🎤 MIC OFF
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="ctrl" onclick="toggleMic()">MIC</button>
+    <button class="ctrl" onclick="changeRedline()">REDLINE</button>
+    <button class="ctrl" onclick="simulate()">SIM</button>
+  </div>
+
+  <div class="main-layout">
+
+    <div class="side-card">
+      <div class="side-label">POTENZA</div>
+      <div class="side-value power" id="powerValue">0</div>
+      <div class="side-unit">CV</div>
+    </div>
+
+    <div class="center-wrap">
+
+      <canvas id="tachometer" width="900" height="900"></canvas>
+
+      <div class="center-data">
+
+        <div class="speed" id="speedValue">
+          0
+        </div>
+
+        <div class="speed-unit">
+          KM/H
+        </div>
+
+        <div class="gear" id="gearValue">
+          N
+        </div>
+
+      </div>
+
+    </div>
+
+    <div class="side-card">
+      <div class="side-label">COPPIA</div>
+      <div class="side-value torque" id="torqueValue">0</div>
+      <div class="side-unit">Nm</div>
+    </div>
+
+  </div>
+
+  <div class="bottom-bar">
+
+    <div class="bottom-pill" id="rpmLabel">
+      RPM: 0
+    </div>
+
+    <div class="bottom-pill">
+      GPS ACTIVE
+    </div>
+
+    <div class="bottom-pill" id="redlineLabel">
+      REDLINE: 8000
+    </div>
+
+    <div class="bottom-pill">
+      AUDIO FFT READY
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+
+/* ───────────────────────────── */
+/* SAFETY */
+/* ───────────────────────────── */
+
+const overlay = document.getElementById("safetyOverlay");
+const check = document.getElementById("safetyCheck");
+const continueBtn = document.getElementById("continueBtn");
+
+if(localStorage.getItem("gpsdynoSafetyAccepted") === "1"){
+  overlay.style.display = "none";
+}
+
+check.addEventListener("change",()=>{
+
+  if(check.checked){
+    continueBtn.classList.add("enabled");
+  }else{
+    continueBtn.classList.remove("enabled");
+  }
+
+});
+
+continueBtn.addEventListener("click",()=>{
+
+  if(!check.checked) return;
+
+  localStorage.setItem("gpsdynoSafetyAccepted","1");
+
+  overlay.style.display = "none";
+
+});
+
+/* ───────────────────────────── */
+/* TACHOMETER */
+/* ───────────────────────────── */
+
+const canvas = document.getElementById("tachometer");
+const ctx = canvas.getContext("2d");
+
+let rpm = 0;
+let displayedRpm = 0;
+let speed = 0;
+let power = 0;
+let torque = 0;
+let gear = "N";
+
+let redline = 8000;
+let maxRpm = 9000;
+
+function drawGauge(){
+
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  const cx = canvas.width/2;
+  const cy = canvas.height/2;
+  const radius = 320;
+
+  /* background ring */
+
+  ctx.beginPath();
+  ctx.arc(cx,cy,radius,Math.PI*0.75,Math.PI*0.25,false);
+  ctx.lineWidth = 36;
+  ctx.strokeStyle = "#181818";
+  ctx.stroke();
+
+  /* colored arcs */
+
+  const start = Math.PI*0.75;
+  const end = Math.PI*0.25;
+
+  for(let i=0;i<=maxRpm;i+=250){
+
+    const t = i/maxRpm;
+
+    const angle = start + (Math.PI*1.5*t);
+
+    let color = "#444";
+
+    if(i > redline*0.82) color = "#ff3030";
+    else if(i > redline*0.65) color = "#ffd000";
+    else color = "#00ff99";
+
+    ctx.beginPath();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 8;
+
+    const r1 = radius-10;
+    const r2 = radius+10;
+
+    ctx.moveTo(
+      cx + Math.cos(angle)*r1,
+      cy + Math.sin(angle)*r1
+    );
+
+    ctx.lineTo(
+      cx + Math.cos(angle)*r2,
+      cy + Math.sin(angle)*r2
+    );
+
+    ctx.stroke();
+
+  }
+
+  /* labels */
+
+  ctx.fillStyle = "#888";
+  ctx.font = "28px Orbitron";
+  ctx.textAlign = "center";
+
+  for(let i=0;i<=maxRpm;i+=1000){
+
+    const t = i/maxRpm;
+
+    const angle = start + (Math.PI*1.5*t);
+
+    const rr = radius-60;
+
+    ctx.fillText(
+      i/1000,
+      cx + Math.cos(angle)*rr,
+      cy + Math.sin(angle)*rr + 10
+    );
+
+  }
+
+  /* needle */
+
+  displayedRpm += (rpm - displayedRpm)*0.08;
+
+  const needleT = displayedRpm/maxRpm;
+
+  const needleAngle = start + (Math.PI*1.5*needleT);
+
+  ctx.save();
+
+  ctx.translate(cx,cy);
+  ctx.rotate(needleAngle);
+
+  ctx.beginPath();
+  ctx.moveTo(-20,0);
+  ctx.lineTo(240,0);
+
+  ctx.lineWidth = 10;
+  ctx.strokeStyle = "#ff3030";
+
+  ctx.shadowBlur = 30;
+  ctx.shadowColor = "#ff3030";
+
+  ctx.stroke();
+
+  ctx.restore();
+
+  /* center */
+
+  ctx.beginPath();
+  ctx.arc(cx,cy,24,0,Math.PI*2);
+  ctx.fillStyle = "#fff";
+  ctx.fill();
+
+  requestAnimationFrame(drawGauge);
+
+}
+
+drawGauge();
+
+/* ───────────────────────────── */
+/* UI UPDATE */
+/* ───────────────────────────── */
+
+function updateUI(){
+
+  document.getElementById("speedValue").textContent =
+    Math.round(speed);
+
+  document.getElementById("powerValue").textContent =
+    Math.round(power);
+
+  document.getElementById("torqueValue").textContent =
+    Math.round(torque);
+
+  document.getElementById("gearValue").textContent =
+    gear;
+
+  document.getElementById("rpmLabel").textContent =
+    "RPM: " + Math.round(rpm);
+
+}
+
+/* ───────────────────────────── */
+/* REDLINE */
+/* ───────────────────────────── */
+
+function changeRedline(){
+
+  const v = prompt("Inserisci redline RPM", redline);
+
+  if(!v) return;
+
+  redline = parseInt(v);
+  maxRpm = redline + 1000;
+
+  document.getElementById("redlineLabel").textContent =
+    "REDLINE: " + redline;
+
+}
+
+/* ───────────────────────────── */
+/* MICROPHONE */
+/* ───────────────────────────── */
+
+let micEnabled = false;
+
+async function toggleMic(){
+
+  if(micEnabled){
+    micEnabled = false;
+
+    document.getElementById("micStatus").textContent =
+      "🎤 MIC OFF";
+
+    return;
+  }
+
+  try{
+
+    const stream =
+      await navigator.mediaDevices.getUserMedia({
+        audio:true
+      });
+
+    const audioContext =
+      new AudioContext();
+
+    const source =
+      audioContext.createMediaStreamSource(stream);
+
+    const analyser =
+      audioContext.createAnalyser();
+
+    analyser.fftSize = 4096;
+
+    source.connect(analyser);
+
+    const buffer =
+      new Uint8Array(analyser.frequencyBinCount);
+
+    micEnabled = true;
+
+    document.getElementById("micStatus").textContent =
+      "🎤 MIC ACTIVE";
+
+    function analyze(){
+
+      if(!micEnabled) return;
+
+      analyser.getByteFrequencyData(buffer);
+
+      let peak = 0;
+      let peakIndex = 0;
+
+      for(let i=0;i<buffer.length;i++){
+
+        if(buffer[i] > peak){
+
+          peak = buffer[i];
+          peakIndex = i;
+
+        }
+
+      }
+
+      const freq =
+        peakIndex * audioContext.sampleRate / analyser.fftSize;
+
+      /* fake rpm estimation */
+
+      const estimated =
+        freq * 30;
+
+      rpm =
+        Math.max(800,Math.min(estimated,maxRpm));
+
+      updateGearEstimate();
+
+      requestAnimationFrame(analyze);
+
+    }
+
+    analyze();
+
+  }catch(e){
+
+    alert("Microfono non disponibile.");
+
+  }
+
+}
+
+/* ───────────────────────────── */
+/* GEAR ESTIMATION */
+/* ───────────────────────────── */
+
+function updateGearEstimate(){
+
+  if(speed < 5){
+
+    gear = "N";
+    return;
+
+  }
+
+  const ratios = {
+    1:120,
+    2:75,
+    3:50,
+    4:37,
+    5:29,
+    6:23
+  };
+
+  let bestGear = 1;
+  let bestError = Infinity;
+
+  for(let g in ratios){
+
+    const theoretical =
+      speed * ratios[g];
+
+    const error =
+      Math.abs(theoretical - rpm);
+
+    if(error < bestError){
+
+      bestError = error;
+      bestGear = g;
+
+    }
+
+  }
+
+  gear = bestGear;
+
+}
+
+/* ───────────────────────────── */
+/* SIMULATION */
+/* ───────────────────────────── */
+
+let simulating = false;
+
+function simulate(){
+
+  if(simulating) return;
+
+  simulating = true;
+
+  let t = 0;
+
+  const interval = setInterval(()=>{
+
+    t += 0.03;
+
+    speed =
+      80 + Math.sin(t*0.3)*30 + t*2;
+
+    rpm =
+      2500 + Math.sin(t*2.5)*1800 + speed*18;
+
+    power =
+      rpm / 22;
+
+    torque =
+      400 + Math.sin(t*1.7)*90;
+
+    updateGearEstimate();
+
+    updateUI();
+
+    if(speed > 260){
+
+      clearInterval(interval);
+      simulating = false;
+
+    }
+
+  },16);
+
+}
+
+/* ───────────────────────────── */
+/* GPS */
+/* ───────────────────────────── */
+
+if("geolocation" in navigator){
+
+  navigator.geolocation.watchPosition(pos=>{
+
+    speed =
+      (pos.coords.speed || 0)*3.6;
+
+    updateUI();
+
+  });
+
+}
+
+</script>
+
+</body>
+</html>
