@@ -1,2638 +1,1377 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-  <meta name="theme-color" content="#0a0a0a" />
-  <meta name="mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="GPS Dyno" />
-  <meta name="description" content="Misura la curva di potenza della tua auto con il GPS" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+  <meta name="theme-color" content="#0a0a0a"/>
+  <meta name="mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="GPS Dyno"/>
   <title>GPS Dyno</title>
-  <link rel="manifest" href="manifest.json" />
-  <link rel="icon" href="icon-192.svg" type="image/svg+xml" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@300;400;600&display=swap" rel="stylesheet" />
+  <link rel="manifest" href="manifest.json"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@300;400;600&display=swap" rel="stylesheet"/>
   <style>
-    :root {
-      --red: #ff2020;
-      --orange: #ff6b00;
-      --yellow: #ffd000;
-      --green: #00ff88;
-      --cyan: #00e5ff;
-      --bg: #0a0a0a;
-      --bg2: #111111;
-      --bg3: #1a1a1a;
-      --border: #2a2a2a;
-      --text: #e8e8e8;
-      --muted: #666;
+    :root{
+      --red:#ff2020;--orange:#ff6b00;--yellow:#ffd000;
+      --green:#00ff88;--cyan:#00e5ff;
+      --bg:#0a0a0a;--bg2:#111;--bg3:#1a1a1a;
+      --border:#2a2a2a;--text:#e8e8e8;--muted:#555
+    }
+    *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace;min-height:100dvh;overflow-x:hidden}
+    @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+    /* ════════════════════════════════════
+       DISCLAIMER
+    ════════════════════════════════════ */
+    #disclaimerScreen{
+      position:fixed;inset:0;z-index:999;background:#0a0a0a;overflow-y:auto;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      padding:28px 20px;text-align:center;
+    }
+    .disc-logo{font-family:'Orbitron',sans-serif;font-weight:900;font-size:26px;letter-spacing:4px;color:var(--red);text-shadow:0 0 30px rgba(255,32,32,.6);margin-bottom:6px}
+    .disc-logo span{color:var(--text)}
+    .disc-icon{font-size:48px;margin:14px 0 10px}
+    .disc-title{font-family:'Orbitron',sans-serif;font-size:13px;letter-spacing:2px;color:var(--text);margin-bottom:18px}
+    .disc-box{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:18px;text-align:left;max-width:480px;width:100%;margin-bottom:18px}
+    .disc-item{display:flex;gap:12px;align-items:flex-start;margin-bottom:12px}
+    .disc-item:last-child{margin-bottom:0}
+    .disc-bullet{font-size:18px;flex-shrink:0}
+    .disc-text{font-size:11px;color:#ccc;line-height:1.7}
+    .disc-text strong{color:var(--yellow)}
+    .disc-check-wrap{display:flex;align-items:flex-start;gap:14px;background:rgba(255,32,32,.06);border:1px solid rgba(255,32,32,.2);border-radius:10px;padding:14px;max-width:480px;width:100%;margin-bottom:18px;cursor:pointer}
+    .disc-check-wrap input[type=checkbox]{width:22px;height:22px;flex-shrink:0;margin-top:2px;accent-color:var(--red);cursor:pointer}
+    .disc-check-text{font-size:11px;color:#ddd;line-height:1.7}
+    .disc-check-text strong{color:var(--red)}
+    .btn-disc{width:100%;max-width:480px;padding:17px;font-family:'Orbitron',sans-serif;font-size:13px;font-weight:700;letter-spacing:3px;border:none;border-radius:10px;cursor:pointer;text-transform:uppercase;background:#222;color:#444;transition:all .3s}
+    .btn-disc.ready{background:linear-gradient(135deg,#ff2020,#ff6b00);color:#fff;box-shadow:0 4px 24px rgba(255,32,32,.4)}
+    .btn-disc:active{transform:scale(.98)}
+    .disc-legal{font-size:9px;color:#2a2a2a;margin-top:12px;line-height:1.6;max-width:480px}
+
+    /* ════════════════════════════════════
+       MAIN APP
+    ════════════════════════════════════ */
+    header{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-bottom:1px solid var(--border);background:linear-gradient(180deg,#111,#0a0a0a);position:sticky;top:0;z-index:100}
+    .logo{font-family:'Orbitron',sans-serif;font-weight:900;font-size:18px;letter-spacing:3px;color:var(--red);text-shadow:0 0 20px rgba(255,32,32,.5)}
+    .logo span{color:var(--text)}
+    .hdr-right{display:flex;align-items:center;gap:10px}
+    .gps-status{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--muted);letter-spacing:1px}
+    .gps-dot{width:7px;height:7px;border-radius:50%;background:var(--muted);transition:background .3s,box-shadow .3s}
+    .gps-dot.active{background:var(--green);box-shadow:0 0 8px var(--green)}
+    .gps-dot.measuring{background:var(--yellow);box-shadow:0 0 8px var(--yellow);animation:blink .5s infinite}
+    .btn-carmode{padding:6px 12px;background:rgba(0,229,255,.1);border:1px solid var(--cyan);color:var(--cyan);border-radius:6px;font-family:'Orbitron',sans-serif;font-size:9px;letter-spacing:1px;cursor:pointer;text-transform:uppercase;white-space:nowrap}
+
+    nav{display:flex;border-bottom:1px solid var(--border);background:var(--bg2)}
+    nav button{flex:1;padding:10px 4px;background:none;border:none;color:var(--muted);font-family:'Orbitron',sans-serif;font-size:9px;letter-spacing:1px;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;text-transform:uppercase}
+    nav button.active{color:var(--red);border-bottom-color:var(--red)}
+
+    .page{display:none;padding:16px}
+    .page.active{display:block}
+
+    /* gauges */
+    .g2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+    .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px}
+    .gauge{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:11px;position:relative;overflow:hidden}
+    .gauge::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--ac,var(--red));box-shadow:0 0 8px var(--ac,var(--red))}
+    .glabel{font-size:8px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px}
+    .gval{font-family:'Orbitron',sans-serif;font-size:22px;font-weight:700;line-height:1;color:var(--ac,var(--red))}
+    .gunit{font-size:9px;color:var(--muted);margin-top:3px;letter-spacing:1px}
+    .gc{--ac:var(--cyan)}.go{--ac:var(--orange)}.gr{--ac:var(--red)}.gy{--ac:var(--yellow)}.gg{--ac:var(--green)}
+
+    .sbar-wrap{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:14px}
+    .sbar-lbl{display:flex;justify-content:space-between;font-size:9px;color:var(--muted);margin-bottom:7px}
+    .sbar-track{height:7px;background:#1e1e1e;border-radius:4px;overflow:hidden}
+    .sbar-fill{height:100%;width:0%;border-radius:4px;background:linear-gradient(90deg,var(--cyan),var(--red));transition:width .3s;box-shadow:0 0 10px var(--red)}
+
+    .gear-panel{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:14px}
+    .gear-panel-title{font-size:8px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px}
+    .gear-row{display:flex;gap:7px;flex-wrap:wrap}
+    .gear-btn{padding:7px 12px;background:#111;border:1px solid var(--border);border-radius:6px;color:var(--muted);font-family:'Orbitron',sans-serif;font-size:12px;cursor:pointer;transition:all .2s;min-width:40px;text-align:center}
+    .gear-btn.sel{background:rgba(255,32,32,.15);border-color:var(--red);color:var(--red)}
+    .gear-btn.unk{border-color:var(--cyan);color:var(--cyan);background:rgba(0,229,255,.07)}
+
+    .controls{display:flex;flex-direction:column;gap:10px;margin-bottom:16px}
+    .btn-main{width:100%;padding:16px;font-family:'Orbitron',sans-serif;font-size:13px;font-weight:700;letter-spacing:3px;border:none;border-radius:8px;cursor:pointer;transition:all .2s;text-transform:uppercase}
+    .btn-main.start{background:linear-gradient(135deg,#ff2020,#ff6b00);color:#fff;box-shadow:0 4px 20px rgba(255,32,32,.4)}
+    .btn-main.stop{background:linear-gradient(135deg,#333,#1a1a1a);color:var(--red);border:1px solid var(--red)}
+    .btn-main:active{transform:scale(.97)}
+    .btn-sec{width:100%;padding:12px;font-family:'Orbitron',sans-serif;font-size:10px;letter-spacing:2px;background:var(--bg3);color:var(--muted);border:1px solid var(--border);border-radius:8px;cursor:pointer;text-transform:uppercase}
+    .info-box{background:rgba(0,229,255,.05);border:1px solid rgba(0,229,255,.15);border-radius:8px;padding:12px;font-size:10px;color:#aaa;line-height:1.8}
+    .info-box strong{color:var(--cyan)}
+    .rec-ind{display:none;align-items:center;gap:8px;background:rgba(255,32,32,.1);border:1px solid rgba(255,32,32,.3);border-radius:6px;padding:9px 12px;margin-bottom:12px;font-size:10px;color:var(--red);letter-spacing:1px}
+    .rec-ind.vis{display:flex}
+    .rec-dot{width:7px;height:7px;border-radius:50%;background:var(--red);animation:blink 1s infinite}
+
+    /* chart */
+    .chart-hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px}
+    .chart-ttl{font-family:'Orbitron',sans-serif;font-size:12px;letter-spacing:2px}
+    .chart-sub{font-size:9px;color:var(--muted);margin-top:3px;letter-spacing:1px}
+    .badges{display:flex;flex-direction:column;gap:4px;align-items:flex-end}
+    .badge{padding:3px 9px;border-radius:20px;font-size:9px;font-weight:600;letter-spacing:1px}
+    .bp{background:rgba(255,32,32,.15);color:var(--red);border:1px solid var(--red)}
+    .bt{background:rgba(255,208,0,.15);color:var(--yellow);border:1px solid var(--yellow)}
+    canvas#dynoChart{width:100%;border-radius:8px;background:var(--bg3);border:1px solid var(--border);display:block}
+    .no-data{text-align:center;padding:50px 20px;color:var(--muted)}
+    .no-data-icon{font-size:44px;margin-bottom:14px;opacity:.4}
+    .no-data p{font-size:11px;letter-spacing:1px;line-height:1.8}
+
+    /* cars */
+    .sec-ttl{font-family:'Orbitron',sans-serif;font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:10px}
+    .car-list{display:flex;flex-direction:column;gap:7px;margin-bottom:16px}
+    .car-item{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:border-color .2s}
+    .car-item.sel{border-color:var(--red)}
+    .car-item.sel .cname{color:var(--red)}
+    .cname{font-size:12px;font-weight:600;letter-spacing:.5px}
+    .cdet{font-size:9px;color:var(--muted);margin-top:3px}
+    .cmass{font-family:'Orbitron',sans-serif;font-size:13px;color:var(--cyan)}
+    .cmass-u{font-size:9px;color:var(--muted)}
+    .car-form{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:16px}
+    .form-ttl{font-family:'Orbitron',sans-serif;font-size:10px;letter-spacing:2px;color:var(--cyan);margin-bottom:12px}
+    .fr{display:flex;flex-direction:column;gap:3px;margin-bottom:9px}
+    .fr2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:9px}
+    .fr3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:9px}
+    label{font-size:8px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:3px;display:block}
+    input,select{width:100%;background:#0f0f0f;border:1px solid var(--border);border-radius:6px;padding:9px 11px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12px;outline:none;-webkit-appearance:none}
+    input:focus,select:focus{border-color:var(--cyan)}
+    .ratios-wrap{background:#0f0f0f;border:1px solid var(--border);border-radius:6px;padding:11px;margin-bottom:10px}
+    .ratios-ttl{font-size:8px;color:var(--cyan);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:3px}
+    .ratios-hint{font-size:9px;color:var(--muted);margin-bottom:9px;line-height:1.5}
+    .grrow{display:grid;grid-template-columns:52px 1fr;gap:7px;align-items:center;margin-bottom:6px}
+    .grlbl{font-size:9px;color:var(--muted);letter-spacing:1px}
+    .btn-add{width:100%;padding:13px;background:rgba(0,229,255,.1);border:1px solid var(--cyan);color:var(--cyan);border-radius:8px;font-family:'Orbitron',sans-serif;font-size:10px;letter-spacing:2px;cursor:pointer;text-transform:uppercase}
+
+    /* runs */
+    .run-list{display:flex;flex-direction:column;gap:7px}
+    .run-item{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:11px 13px;display:flex;justify-content:space-between;align-items:center;cursor:pointer}
+    .run-item:active{border-color:var(--red)}
+    .run-date{font-size:9px;color:var(--muted)}
+    .run-peak{font-family:'Orbitron',sans-serif;font-size:12px;color:var(--red)}
+
+    /* modals */
+    .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:200;align-items:flex-end;justify-content:center}
+    .overlay.open{display:flex}
+    .modal{background:var(--bg2);border:1px solid var(--border);border-top-left-radius:16px;border-top-right-radius:16px;padding:22px 18px 44px;width:100%;max-width:520px;max-height:88dvh;overflow-y:auto}
+    .modal-ttl{font-family:'Orbitron',sans-serif;font-size:13px;letter-spacing:2px;color:var(--cyan);margin-bottom:5px}
+    .modal-sub{font-size:10px;color:var(--muted);margin-bottom:16px;line-height:1.6}
+    .mg-list{display:flex;flex-direction:column;gap:7px;margin-bottom:14px}
+    .mg-item{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:13px 15px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;transition:border-color .2s}
+    .mg-item:active{border-color:var(--red)}
+    .mg-num{font-family:'Orbitron',sans-serif;font-size:20px;color:var(--red)}
+    .mg-rv{font-size:12px;color:var(--text)}
+    .mg-info{font-size:9px;color:var(--muted);text-align:right}
+    .sep{border:none;border-top:1px solid var(--border);margin:12px 0}
+    .btn-cancel{width:100%;padding:13px;background:none;border:1px solid var(--border);color:var(--muted);border-radius:8px;font-family:'Orbitron',sans-serif;font-size:10px;letter-spacing:2px;cursor:pointer;text-transform:uppercase}
+    .wizard-box{background:rgba(0,229,255,.05);border:1px solid rgba(0,229,255,.2);border-radius:8px;padding:14px;margin-bottom:14px}
+    .wiz-ttl{font-size:8px;color:var(--cyan);letter-spacing:2px;text-transform:uppercase;margin-bottom:7px}
+    .wiz-body{font-size:10px;color:#aaa;line-height:1.7;margin-bottom:10px}
+    .btn-wiz{width:100%;padding:11px;background:rgba(0,229,255,.12);border:1px solid var(--cyan);color:var(--cyan);border-radius:6px;font-family:'Orbitron',sans-serif;font-size:9px;letter-spacing:1.5px;cursor:pointer;text-transform:uppercase;margin-top:7px}
+    .wiz-result{display:none;background:rgba(0,255,136,.05);border:1px solid rgba(0,255,136,.2);border-radius:8px;padding:12px;margin-bottom:12px;font-size:10px;color:#aaa;line-height:1.8}
+
+    .disc-bottom{margin:18px 0 4px;font-size:8px;color:#333;text-align:center;line-height:1.6}
+    ::-webkit-scrollbar{width:3px}
+    ::-webkit-scrollbar-track{background:var(--bg)}
+    ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+
+    /* ════════════════════════════════════
+       CAR MODE — full landscape layout
+    ════════════════════════════════════ */
+    #carModeScreen{
+      display:none;position:fixed;inset:0;z-index:300;
+      background:#030303;
+      /* Always landscape layout regardless of device orientation */
+    }
+    #carModeScreen.open{display:grid}
+
+    /* Portrait phone fallback: stack vertically */
+    #carModeScreen{
+      grid-template-columns: 1fr;
+      grid-template-rows: auto 1fr auto;
     }
 
-    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'JetBrains Mono', monospace;
-      min-height: 100dvh;
-      overflow-x: hidden;
+    /* Landscape (tablet in car or rotated phone) */
+    @media (orientation: landscape) {
+      #carModeScreen{
+        grid-template-columns: auto 1fr auto;
+        grid-template-rows: 1fr;
+      }
     }
 
-    /* ── HEADER ── */
-    header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 16px 20px 12px;
-      border-bottom: 1px solid var(--border);
-      background: linear-gradient(180deg, #111 0%, #0a0a0a 100%);
-      position: sticky;
-      top: 0;
-      z-index: 100;
+    /* ── CM top bar (portrait) / left column (landscape) ── */
+    .cm-left{
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      padding:12px 16px;gap:8px;
+      border-bottom:1px solid #1a1a1a;
     }
-    .logo {
-      font-family: 'Orbitron', sans-serif;
-      font-weight: 900;
-      font-size: 22px;
-      letter-spacing: 3px;
-      color: var(--red);
-      text-shadow: 0 0 20px rgba(255,32,32,0.5);
-    }
-    .logo span { color: var(--text); }
-    .gps-status {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 11px;
-      color: var(--muted);
-      letter-spacing: 1px;
-    }
-    .gps-dot {
-      width: 8px; height: 8px;
-      border-radius: 50%;
-      background: var(--muted);
-      transition: background 0.3s, box-shadow 0.3s;
-    }
-    .gps-dot.active { background: var(--green); box-shadow: 0 0 8px var(--green); }
-    .gps-dot.measuring { background: var(--yellow); box-shadow: 0 0 8px var(--yellow); animation: blink 0.5s infinite; }
-    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
-
-    /* ── NAV TABS ── */
-    nav {
-      display: flex;
-      border-bottom: 1px solid var(--border);
-      background: var(--bg2);
-    }
-    nav button {
-      flex: 1;
-      padding: 12px 4px;
-      background: none;
-      border: none;
-      color: var(--muted);
-      font-family: 'Orbitron', sans-serif;
-      font-size: 9px;
-      letter-spacing: 1.5px;
-      cursor: pointer;
-      border-bottom: 2px solid transparent;
-      transition: all 0.2s;
-      text-transform: uppercase;
-    }
-    nav button.active {
-      color: var(--red);
-      border-bottom-color: var(--red);
+    @media (orientation:landscape){
+      .cm-left{
+        border-bottom:none;border-right:1px solid #1a1a1a;
+        padding:16px 14px;min-width:120px;
+      }
     }
 
-    /* ── PAGES ── */
-    .page { display: none; padding: 20px; }
-    .page.active { display: block; }
+    /* Gear badge */
+    .cm-gear-num{
+      font-family:'Orbitron',sans-serif;font-weight:900;
+      font-size:clamp(48px,10vw,96px);
+      color:var(--red);text-shadow:0 0 40px rgba(255,32,32,.7);
+      line-height:1;
+    }
+    .cm-gear-lbl{font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase}
 
-    /* ── GAUGE GRID ── */
-    .gauge-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin-bottom: 20px;
-    }
-    .gauge-card {
-      background: var(--bg3);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 14px;
-      position: relative;
-      overflow: hidden;
-    }
-    .gauge-card::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 2px;
-      background: var(--accent, var(--red));
-      box-shadow: 0 0 8px var(--accent, var(--red));
-    }
-    .gauge-label {
-      font-size: 9px;
-      color: var(--muted);
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      margin-bottom: 6px;
-    }
-    .gauge-value {
-      font-family: 'Orbitron', sans-serif;
-      font-size: 28px;
-      font-weight: 700;
-      line-height: 1;
-      color: var(--accent, var(--red));
-    }
-    .gauge-unit {
-      font-size: 10px;
-      color: var(--muted);
-      margin-top: 4px;
-      letter-spacing: 1px;
-    }
-    .gauge-card.speed { --accent: var(--cyan); }
-    .gauge-card.rpm   { --accent: var(--green); }
-    .gauge-card.power { --accent: var(--red); }
-    .gauge-card.torque { --accent: var(--yellow); }
-
-    /* ── SPEED BAR ── */
-    .speed-bar-wrap {
-      background: var(--bg3);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 16px;
-      margin-bottom: 16px;
-    }
-    .speed-bar-label {
-      display: flex;
-      justify-content: space-between;
-      font-size: 10px;
-      color: var(--muted);
-      letter-spacing: 1px;
-      margin-bottom: 10px;
-    }
-    .speed-bar-track {
-      height: 8px;
-      background: #1e1e1e;
-      border-radius: 4px;
-      overflow: hidden;
-    }
-    .speed-bar-fill {
-      height: 100%;
-      width: 0%;
-      border-radius: 4px;
-      background: linear-gradient(90deg, var(--cyan), var(--red));
-      transition: width 0.3s ease;
-      box-shadow: 0 0 10px var(--red);
-    }
-
-    /* ── GEAR / TIRE STRIP ── */
-    .test-config-strip {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 16px;
-    }
-    .config-pill {
-      flex: 1;
-      background: var(--bg3);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 10px 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-      cursor: pointer;
-      transition: border-color 0.2s;
-    }
-    .config-pill:hover, .config-pill.set { border-color: var(--cyan); }
-    .config-pill-label { font-size: 8px; color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; }
-    .config-pill-value { font-family: 'Orbitron', sans-serif; font-size: 13px; color: var(--cyan); font-weight: 700; }
-
-    /* ── BIG CONTROL BUTTON ── */
-    .controls {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      margin-bottom: 16px;
-    }
-    .btn-main {
-      width: 100%;
-      padding: 20px;
-      font-family: 'Orbitron', sans-serif;
-      font-size: 14px;
-      font-weight: 700;
-      letter-spacing: 3px;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: all 0.2s;
-      text-transform: uppercase;
-      position: relative;
-      overflow: hidden;
-    }
-    .btn-main.start {
-      background: linear-gradient(135deg, #ff2020, #ff6b00);
-      color: white;
-      box-shadow: 0 4px 20px rgba(255,32,32,0.4);
-    }
-    .btn-main.stop {
-      background: linear-gradient(135deg, #333, #1a1a1a);
-      color: var(--red);
-      border: 1px solid var(--red);
-    }
-    .btn-main:active { transform: scale(0.97); }
-    .btn-secondary {
-      width: 100%;
-      padding: 14px;
-      font-family: 'Orbitron', sans-serif;
-      font-size: 11px;
-      letter-spacing: 2px;
-      background: var(--bg3);
-      color: var(--muted);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      cursor: pointer;
-      text-transform: uppercase;
-    }
-
-    /* ── INFO BOX ── */
-    .info-box {
-      background: rgba(0,229,255,0.05);
-      border: 1px solid rgba(0,229,255,0.15);
-      border-radius: 8px;
-      padding: 14px;
-      font-size: 11px;
-      color: #aaa;
-      line-height: 1.7;
-      letter-spacing: 0.3px;
-    }
-    .info-box strong { color: var(--cyan); }
-
-    /* ── CHART PAGE ── */
-    .chart-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 16px;
-    }
-    .chart-title {
-      font-family: 'Orbitron', sans-serif;
-      font-size: 13px;
-      letter-spacing: 2px;
-      color: var(--text);
-    }
-    .chart-subtitle { font-size: 10px; color: var(--muted); margin-top: 4px; letter-spacing: 1px; }
-    .peak-badges {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      align-items: flex-end;
-    }
-    .badge {
-      padding: 3px 10px;
-      border-radius: 20px;
-      font-size: 10px;
-      font-weight: 600;
-      letter-spacing: 1px;
-    }
-    .badge.power { background: rgba(255,32,32,0.15); color: var(--red); border: 1px solid var(--red); }
-    .badge.torque { background: rgba(255,208,0,0.15); color: var(--yellow); border: 1px solid var(--yellow); }
-
-    canvas#dynoChart {
-      width: 100%;
-      max-height: 280px;
-      border-radius: 8px;
-      background: var(--bg3);
-      border: 1px solid var(--border);
-      display: block;
-    }
-
-    .no-data {
-      text-align: center;
-      padding: 60px 20px;
-      color: var(--muted);
-    }
-    .no-data-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.4; }
-    .no-data p { font-size: 11px; letter-spacing: 1px; line-height: 1.8; }
-
-    /* ── CAR DATABASE PAGE ── */
-    .section-title {
-      font-family: 'Orbitron', sans-serif;
-      font-size: 11px;
-      letter-spacing: 2px;
-      color: var(--muted);
-      text-transform: uppercase;
-      margin-bottom: 12px;
-    }
-    .car-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
-    .car-item {
-      background: var(--bg3);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 14px 16px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      cursor: pointer;
-      transition: border-color 0.2s;
-    }
-    .car-item.selected { border-color: var(--red); }
-    .car-item.selected .car-name { color: var(--red); }
-    .car-name { font-size: 13px; font-weight: 600; letter-spacing: 0.5px; }
-    .car-details { font-size: 10px; color: var(--muted); margin-top: 3px; letter-spacing: 0.5px; }
-    .car-mass { font-family: 'Orbitron', sans-serif; font-size: 14px; color: var(--cyan); }
-    .car-mass-unit { font-size: 9px; color: var(--muted); }
-
-    .add-car-form {
-      background: var(--bg3);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 16px;
-      margin-bottom: 20px;
-    }
-    .form-title {
-      font-family: 'Orbitron', sans-serif;
-      font-size: 11px;
-      letter-spacing: 2px;
-      color: var(--cyan);
-      margin-bottom: 14px;
-    }
-    .form-row { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
-    .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
-    .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px; }
-    label { font-size: 9px; color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 4px; display: block; }
-    input, select {
-      width: 100%;
-      background: #0f0f0f;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 10px 12px;
-      color: var(--text);
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 13px;
-      outline: none;
-      -webkit-appearance: none;
-    }
-    input:focus, select:focus { border-color: var(--cyan); }
-    .btn-add {
-      width: 100%;
-      padding: 14px;
-      background: rgba(0,229,255,0.1);
-      border: 1px solid var(--cyan);
-      color: var(--cyan);
-      border-radius: 8px;
-      font-family: 'Orbitron', sans-serif;
-      font-size: 11px;
-      letter-spacing: 2px;
-      cursor: pointer;
-      text-transform: uppercase;
-    }
-
-    /* ── RESULTS PAGE ── */
-    .result-card {
-      background: var(--bg3);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 16px;
-      margin-bottom: 12px;
-    }
-    .result-label { font-size: 10px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 8px; }
-    .result-value {
-      font-family: 'Orbitron', sans-serif;
-      font-size: 36px;
-      font-weight: 900;
-      color: var(--red);
-    }
-    .result-unit { font-size: 14px; color: var(--muted); margin-left: 4px; }
-    .result-sub { font-size: 10px; color: var(--muted); margin-top: 4px; }
-
-    .run-list { display: flex; flex-direction: column; gap: 8px; }
-    .run-item {
-      background: var(--bg3);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 12px 14px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      cursor: pointer;
-    }
-    .run-item:active { border-color: var(--red); }
-    .run-date { font-size: 10px; color: var(--muted); }
-    .run-peak { font-family: 'Orbitron', sans-serif; font-size: 13px; color: var(--red); }
-
-    /* ── FOOTER ── */
-    .disclaimer {
-      margin: 24px 0 8px;
-      font-size: 9px;
-      color: #444;
-      text-align: center;
-      line-height: 1.7;
-      letter-spacing: 0.5px;
-    }
-
-    /* ── RECORDING ANIMATION ── */
-    .rec-indicator {
-      display: none;
-      align-items: center;
-      gap: 8px;
-      background: rgba(255,32,32,0.1);
-      border: 1px solid rgba(255,32,32,0.3);
-      border-radius: 6px;
-      padding: 10px 14px;
-      margin-bottom: 16px;
-      font-size: 11px;
-      color: var(--red);
-      letter-spacing: 1px;
-    }
-    .rec-indicator.visible { display: flex; }
-    .rec-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--red); animation: blink 1s infinite; }
-
-    /* ── SCROLLBAR ── */
-    ::-webkit-scrollbar { width: 4px; }
-    ::-webkit-scrollbar-track { background: var(--bg); }
-    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
-    /* ── MODAL OVERLAY ── */
-    .modal-overlay {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.85);
-      z-index: 200;
-      align-items: flex-end;
-      justify-content: center;
-      backdrop-filter: blur(4px);
-    }
-    .modal-overlay.visible { display: flex; }
-    .modal-sheet {
-      background: #111;
-      border: 1px solid var(--border);
-      border-bottom: none;
-      border-radius: 16px 16px 0 0;
-      padding: 24px 20px 40px;
-      width: 100%;
-      max-width: 480px;
-      max-height: 90dvh;
-      overflow-y: auto;
-    }
-    .modal-handle {
-      width: 36px; height: 4px;
-      background: var(--border);
-      border-radius: 2px;
-      margin: 0 auto 20px;
-    }
-    .modal-title {
-      font-family: 'Orbitron', sans-serif;
-      font-size: 14px;
-      letter-spacing: 2px;
-      color: var(--text);
-      margin-bottom: 6px;
-    }
-    .modal-subtitle {
-      font-size: 10px;
-      color: var(--muted);
-      letter-spacing: 0.5px;
-      margin-bottom: 20px;
-      line-height: 1.6;
-    }
-    .modal-actions {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      margin-top: 20px;
-    }
-    .btn-modal-primary {
-      width: 100%;
-      padding: 16px;
-      font-family: 'Orbitron', sans-serif;
-      font-size: 12px;
-      letter-spacing: 2px;
-      background: linear-gradient(135deg, #ff2020, #ff6b00);
-      color: white;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      text-transform: uppercase;
-    }
-    .btn-modal-secondary {
-      width: 100%;
-      padding: 14px;
-      font-family: 'Orbitron', sans-serif;
-      font-size: 11px;
-      letter-spacing: 2px;
-      background: transparent;
-      color: var(--cyan);
-      border: 1px solid var(--cyan);
-      border-radius: 8px;
-      cursor: pointer;
-      text-transform: uppercase;
-    }
-    .btn-modal-ghost {
-      width: 100%;
-      padding: 12px;
-      font-family: 'Orbitron', sans-serif;
-      font-size: 10px;
-      letter-spacing: 1.5px;
-      background: transparent;
-      color: var(--muted);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      cursor: pointer;
-      text-transform: uppercase;
-    }
-
-    /* ── GEAR SELECTOR ── */
-    .gear-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 8px;
-      margin: 16px 0;
-    }
-    .gear-btn {
-      padding: 14px 8px;
-      background: var(--bg3);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      font-family: 'Orbitron', sans-serif;
-      font-size: 16px;
-      font-weight: 700;
-      color: var(--muted);
-      cursor: pointer;
-      text-align: center;
-      transition: all 0.15s;
-    }
-    .gear-btn:active, .gear-btn.selected {
-      background: rgba(255,32,32,0.15);
-      border-color: var(--red);
-      color: var(--red);
-    }
-
-    /* ── TIRE DISPLAY ── */
-    .tire-preview {
-      background: var(--bg3);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 14px;
-      margin: 12px 0;
-      display: none;
-    }
-    .tire-preview.visible { display: block; }
-    .tire-preview-title { font-size: 9px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 8px; }
-    .tire-preview-row { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 4px; }
-    .tire-preview-row span:first-child { color: var(--muted); }
-    .tire-preview-row span:last-child { color: var(--cyan); font-family: 'Orbitron', sans-serif; font-size: 12px; }
-
-    /* ── GEAR RATIOS EDITOR ── */
-    .ratio-list { display: flex; flex-direction: column; gap: 8px; margin: 12px 0; }
-    .ratio-row {
-      display: grid;
-      grid-template-columns: 80px 1fr 80px;
-      gap: 8px;
-      align-items: center;
-    }
-    .ratio-label { font-size: 10px; color: var(--muted); letter-spacing: 1px; }
-    .ratio-computed { font-family: 'Orbitron', sans-serif; font-size: 12px; color: var(--green); text-align: right; }
-
-    /* ── CALIBRATION WIZARD ── */
-    .wizard-step {
-      background: rgba(255,208,0,0.05);
-      border: 1px solid rgba(255,208,0,0.2);
-      border-radius: 8px;
-      padding: 16px;
-      margin: 12px 0;
-    }
-    .wizard-step-title { font-family: 'Orbitron', sans-serif; font-size: 11px; color: var(--yellow); letter-spacing: 2px; margin-bottom: 8px; }
-    .wizard-step-body { font-size: 11px; color: #aaa; line-height: 1.7; }
-    .wizard-step-body strong { color: var(--yellow); }
-    .live-speed-display {
-      font-family: 'Orbitron', sans-serif;
-      font-size: 48px;
-      font-weight: 900;
-      color: var(--cyan);
-      text-align: center;
-      margin: 16px 0 4px;
-      text-shadow: 0 0 20px rgba(0,229,255,0.4);
-    }
-    .live-speed-unit { text-align: center; font-size: 11px; color: var(--muted); letter-spacing: 2px; margin-bottom: 16px; }
-
-    /* ── RPM GAUGE (live) ── */
-    .rpm-display {
-      font-family: 'Orbitron', sans-serif;
-      font-size: 36px;
-      font-weight: 900;
-      color: var(--green);
-      text-align: center;
-      text-shadow: 0 0 20px rgba(0,255,136,0.4);
-    }
-
-    /* ── GEAR RATIO BADGE on measure page ── */
-    .gear-ratio-badge {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 12px;
-      background: rgba(0,255,136,0.05);
-      border: 1px solid rgba(0,255,136,0.15);
-      border-radius: 8px;
-      padding: 10px 14px;
-      margin-bottom: 16px;
-      font-size: 11px;
-      color: #aaa;
-      letter-spacing: 0.5px;
-    }
-    .gear-ratio-badge .gear-num {
-      font-family: 'Orbitron', sans-serif;
-      font-size: 20px;
-      font-weight: 900;
-      color: var(--green);
-    }
-    .gear-ratio-badge .sep { color: var(--border); }
-    .gear-ratio-badge .tire-info { font-size: 10px; color: var(--muted); }
-  
-    /* ── SAFETY OVERLAY ── */
-    #safetyOverlay{
-      position:fixed;
-      inset:0;
-      background:rgba(0,0,0,0.96);
-      z-index:999999;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      padding:24px;
-    }
-    .safety-card{
-      width:100%;
-      max-width:720px;
-      background:#111;
+    /* Mic status pill */
+    .mic-pill{
+      display:flex;align-items:center;gap:5px;
+      padding:4px 10px;border-radius:20px;
       border:1px solid var(--border);
-      border-radius:18px;
-      padding:28px;
+      font-size:8px;letter-spacing:1px;color:var(--muted);
+      cursor:pointer;transition:all .2s;
+      background:#0f0f0f;
     }
-    .safety-title{
-      font-family:'Orbitron',sans-serif;
-      color:var(--red);
-      font-size:32px;
-      font-weight:900;
-      margin-bottom:18px;
-    }
-    .safety-text{
-      color:#bbb;
-      line-height:1.8;
-      font-size:14px;
-    }
-    .safety-check-row{
-      display:flex;
-      gap:12px;
-      margin-top:24px;
-      align-items:flex-start;
-    }
-    .safety-check-row label{
-      font-size:13px;
-      color:#ddd;
-      line-height:1.6;
-    }
-    #safetyContinueBtn{
-      width:100%;
-      margin-top:24px;
-      padding:16px;
-      border:none;
-      border-radius:10px;
-      background:linear-gradient(135deg,#ff2020,#ff6b00);
-      color:white;
-      font-family:'Orbitron',sans-serif;
-      font-size:13px;
-      letter-spacing:2px;
-      opacity:.4;
-    }
-    #safetyContinueBtn.enabled{
-      opacity:1;
-      cursor:pointer;
-    }
+    .mic-pill.active{border-color:var(--green);color:var(--green);background:rgba(0,255,136,.08)}
+    .mic-pill.active .mic-dot{background:var(--green);box-shadow:0 0 6px var(--green);animation:blink .8s infinite}
+    .mic-dot{width:6px;height:6px;border-radius:50%;background:var(--muted)}
 
-    /* ── CAR MODE ── */
-    .car-mode-layout{
-      display:grid;
-      grid-template-columns:220px 1fr 220px;
-      gap:20px;
-      align-items:center;
-      min-height:70vh;
+    /* Confidence bar */
+    .conf-wrap{width:100%;max-width:100px}
+    .conf-lbl{font-size:7px;color:var(--muted);letter-spacing:1px;margin-bottom:3px;text-align:center}
+    .conf-bar{height:4px;background:#1a1a1a;border-radius:2px;overflow:hidden}
+    .conf-fill{height:100%;width:0%;background:var(--green);border-radius:2px;transition:width .4s}
+
+    /* ── CM center: tachometer ── */
+    .cm-center{
+      display:flex;align-items:center;justify-content:center;
+      position:relative;padding:8px;
     }
-    .car-side-card{
-      background:var(--bg3);
-      border:1px solid var(--border);
-      border-radius:14px;
-      padding:24px;
-      text-align:center;
-    }
-    .car-side-label{
-      font-size:10px;
-      color:var(--muted);
-      letter-spacing:2px;
-      margin-bottom:10px;
-    }
-    .car-side-value{
-      font-family:'Orbitron',sans-serif;
-      font-size:52px;
-      font-weight:900;
-      color:var(--red);
-    }
-    .car-side-unit{
-      margin-top:10px;
-      font-size:12px;
-      color:var(--muted);
-    }
-    .tach-wrap{
+    .tacho-wrap{
       position:relative;
-      display:flex;
-      justify-content:center;
-      align-items:center;
+      width:min(80vmin, 90%, 420px);
+      aspect-ratio:1;
     }
-    #tachCanvas{
-      width:min(80vw,700px);
-      height:min(80vw,700px);
+    @media (orientation:landscape){
+      .tacho-wrap{
+        width:min(70vh,420px);
+      }
     }
-    .tach-center{
-      position:absolute;
-      text-align:center;
+    canvas#tachoCanvas{width:100%;height:100%;display:block}
+    .tacho-center{
+      position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+      text-align:center;pointer-events:none;
     }
-    .tach-speed{
-      font-family:'Orbitron',sans-serif;
-      font-size:92px;
-      font-weight:900;
-      color:var(--cyan);
-    }
-    .tach-speed-unit{
-      color:var(--muted);
-      font-size:13px;
-      letter-spacing:3px;
-    }
-    .tach-gear{
-      margin-top:14px;
-      font-family:'Orbitron',sans-serif;
-      font-size:84px;
-      font-weight:900;
-      color:var(--green);
-    }
-    .car-mode-bottom{
-      display:flex;
-      gap:10px;
-      justify-content:center;
-      flex-wrap:wrap;
-      margin-top:12px;
-    }
-    .car-pill{
-      background:var(--bg3);
-      border:1px solid var(--border);
-      border-radius:999px;
-      padding:10px 16px;
-      font-size:11px;
-      color:#aaa;
-      letter-spacing:1px;
-    }
+    .tacho-rpm-val{font-family:'Orbitron',sans-serif;font-size:clamp(18px,4vmin,32px);font-weight:900;color:#fff;line-height:1}
+    .tacho-rpm-unit{font-size:8px;color:var(--muted);letter-spacing:2px;margin-top:3px}
 
-    @media(max-width:900px){
-      .car-mode-layout{
-        grid-template-columns:1fr;
-      }
-      .car-side-card{
-        display:none;
-      }
-      .tach-speed{
-        font-size:64px;
-      }
-      .tach-gear{
-        font-size:58px;
+    /* ── CM right: numeric gauges ── */
+    .cm-right{
+      display:flex;flex-direction:row;justify-content:space-around;align-items:center;
+      padding:12px 16px;gap:10px;
+      border-top:1px solid #1a1a1a;
+    }
+    @media (orientation:landscape){
+      .cm-right{
+        flex-direction:column;justify-content:center;
+        border-top:none;border-left:1px solid #1a1a1a;
+        padding:16px 14px;min-width:140px;gap:12px;
       }
     }
 
-</style>
+    .cm-gauge{
+      background:#0a0a0a;border:1px solid #1e1e1e;border-radius:10px;
+      padding:10px 12px;text-align:center;
+      position:relative;overflow:hidden;
+      flex:1;
+    }
+    @media (orientation:landscape){
+      .cm-gauge{flex:none;width:100%}
+    }
+    .cm-gauge::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--cac,#333);box-shadow:0 0 6px var(--cac,#333)}
+    .cm-glbl{font-size:7px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:5px}
+    .cm-gval{font-family:'Orbitron',sans-serif;font-size:clamp(20px,3.5vw,30px);font-weight:700;color:var(--cac,#aaa);line-height:1}
+    .cm-gunit{font-size:8px;color:var(--muted);margin-top:3px}
+    .cm-speed{--cac:var(--cyan)}
+    .cm-power{--cac:var(--red)}
+    .cm-torque{--cac:var(--yellow)}
+
+    /* CM header bar — exit + settings */
+    .cm-topbar{
+      position:absolute;top:0;left:0;right:0;
+      display:flex;justify-content:space-between;align-items:center;
+      padding:6px 14px;
+      background:rgba(0,0,0,.6);
+      z-index:10;
+    }
+    .cm-logo-sm{font-family:'Orbitron',sans-serif;font-size:10px;letter-spacing:3px;color:#222}
+    .cm-settings-row{display:flex;align-items:center;gap:8px;font-size:9px;color:var(--muted)}
+    .cm-settings-row input{width:56px;padding:3px 7px;font-size:10px;background:#111;border:1px solid #2a2a2a;border-radius:4px;color:var(--text);font-family:'JetBrains Mono',monospace}
+    .cm-exit{padding:5px 14px;background:rgba(255,32,32,.12);border:1px solid rgba(255,32,32,.3);color:var(--red);border-radius:5px;font-family:'Orbitron',sans-serif;font-size:9px;letter-spacing:1.5px;cursor:pointer;text-transform:uppercase}
+
+    /* mic listen indicator on tacho */
+    .mic-freq-badge{
+      position:absolute;bottom:22%;left:50%;transform:translateX(-50%);
+      font-family:'Orbitron',sans-serif;font-size:10px;color:var(--muted);
+      letter-spacing:1px;text-align:center;pointer-events:none;
+    }
+    .mic-freq-val{font-size:13px;color:var(--green)}
+  </style>
 </head>
 <body>
 
-<header>
-  <div class="logo">GPS<span>DYNO</span></div>
-  <div class="gps-status">
-    <div class="gps-dot" id="gpsDot"></div>
-    <span id="gpsLabel">NO GPS</span>
-  </div>
-</header>
+<!-- ══════════ DISCLAIMER ══════════ -->
+<div id="disclaimerScreen">
+  <div class="disc-logo">GPS<span>DYNO</span></div>
+  <div class="disc-icon">⚠️</div>
+  <div class="disc-title">PRIMA DI INIZIARE</div>
 
-<nav>
-  <button class="active" onclick="showPage('measure')">⚡ MISURA</button>
-  <button onclick="showPage('chart')">📈 CURVA</button>
-  <button onclick="showPage('runs')">🏁 RUNS</button>
-  <button onclick="showPage('cars')">🚗 AUTO</button>
-  <button onclick="showPage('carmode')">🏎 CAR MODE</button>
-</nav>
-
-<!-- ═══ PAGE: MEASURE ═══ -->
-<div class="page active" id="page-measure">
-
-  <div class="rec-indicator" id="recIndicator">
-    <div class="rec-dot"></div>
-    REGISTRAZIONE IN CORSO — <span id="recTime">0.0s</span>
-  </div>
-
-  <!-- Test configuration strip -->
-  <div class="test-config-strip">
-    <div class="config-pill" id="gearPill" onclick="openGearModal()">
-      <div class="config-pill-label">Marcia</div>
-      <div class="config-pill-value" id="gearPillVal">—</div>
+  <div class="disc-box">
+    <div class="disc-item">
+      <span class="disc-bullet">🚗</span>
+      <div class="disc-text">Questa app è pensata per essere usata <strong>come passeggero</strong> oppure, se stai guidando, con il dispositivo fissato in un supporto — mai tenuto in mano mentre il veicolo è in movimento.</div>
     </div>
-    <div class="config-pill" id="tirePill" onclick="openTireModal()">
-      <div class="config-pill-label">Gommatura</div>
-      <div class="config-pill-value" id="tirePillVal">—</div>
+    <div class="disc-item">
+      <span class="disc-bullet">📍</span>
+      <div class="disc-text">Le misurazioni vanno effettuate <strong>su strade private, circuiti o in condizioni di piena sicurezza</strong>, lontano da altri veicoli, pedoni e situazioni di traffico.</div>
     </div>
-    <div class="config-pill" id="ratioPill" onclick="openRatioModal()">
-      <div class="config-pill-label">Rapporto</div>
-      <div class="config-pill-value" id="ratioPillVal">—</div>
+    <div class="disc-item">
+      <span class="disc-bullet">⚖️</span>
+      <div class="disc-text"><strong>Rispetta sempre il codice della strada</strong> e i limiti di velocità. L'utilizzo improprio dell'app è esclusiva responsabilità del conducente.</div>
+    </div>
+    <div class="disc-item">
+      <span class="disc-bullet">🎙️</span>
+      <div class="disc-text">La funzione riconoscimento marcia usa il <strong>microfono del dispositivo</strong> per analizzare il suono del motore. L'autorizzazione è opzionale.</div>
+    </div>
+    <div class="disc-item">
+      <span class="disc-bullet">📊</span>
+      <div class="disc-text">I valori di potenza e coppia sono <strong>stime basate su modelli fisici</strong> e possono differire da misurazioni su banco a rulli.</div>
     </div>
   </div>
 
-  <!-- Active gear+tire badge (shown when configured) -->
-  <div class="gear-ratio-badge" id="gearRatioBadge" style="display:none">
-    <span class="gear-num" id="badgeGear">3</span>
-    <span class="sep">|</span>
-    <div>
-      <div id="badgeTire" style="font-family:'Orbitron',sans-serif;font-size:12px;color:var(--cyan)">225/55 R17</div>
-      <div class="tire-info" id="badgeRatio">Rapporto: —</div>
+  <label class="disc-check-wrap">
+    <input type="checkbox" id="agreeCheck" onchange="onCheckChange()"/>
+    <div class="disc-check-text">Ho letto e compreso le condizioni d'uso. Utilizzerò GPS Dyno <strong>in modo responsabile</strong>, rispettando le norme del codice della strada e garantendo la sicurezza mia e degli altri.</div>
+  </label>
+
+  <button class="btn-disc" id="enterBtn" disabled onclick="enterApp()">ENTRA NELL'APP</button>
+  <div class="disc-legal">GPS Dyno non è responsabile di danni a persone, veicoli o terzi derivanti dall'uso improprio dell'applicazione.</div>
+</div>
+
+<!-- ══════════ MAIN APP ══════════ -->
+<div id="mainApp" style="display:none">
+  <header>
+    <div class="logo">GPS<span>DYNO</span></div>
+    <div class="hdr-right">
+      <button class="btn-carmode" onclick="openCarMode()">🚗 CAR MODE</button>
+      <div class="gps-status">
+        <div class="gps-dot" id="gpsDot"></div>
+        <span id="gpsLabel">NO GPS</span>
+      </div>
+    </div>
+  </header>
+
+  <nav>
+    <button class="active" onclick="showPage('measure',this)">⚡ MISURA</button>
+    <button onclick="showPage('chart',this)">📈 CURVA</button>
+    <button onclick="showPage('runs',this)">🏁 RUNS</button>
+    <button onclick="showPage('cars',this)">🚗 AUTO</button>
+  </nav>
+
+  <!-- MEASURE -->
+  <div class="page active" id="page-measure">
+    <div class="rec-ind" id="recInd"><div class="rec-dot"></div>REC — <span id="recTime">0.0s</span></div>
+    <div class="g2">
+      <div class="gauge gc"><div class="glabel">VELOCITÀ</div><div class="gval" id="gSpeed">0</div><div class="gunit">km/h</div></div>
+      <div class="gauge go"><div class="glabel">ACCEL.</div><div class="gval" id="gAccel">0.00</div><div class="gunit">m/s²</div></div>
+    </div>
+    <div class="g3">
+      <div class="gauge gr"><div class="glabel">POTENZA</div><div class="gval" id="gPower">—</div><div class="gunit">CV</div></div>
+      <div class="gauge gy"><div class="glabel">COPPIA</div><div class="gval" id="gTorque">—</div><div class="gunit">Nm</div></div>
+      <div class="gauge gg"><div class="glabel">RPM STIM.</div><div class="gval" id="gRpm">—</div><div class="gunit">giri</div></div>
+    </div>
+    <div class="sbar-wrap">
+      <div class="sbar-lbl"><span>0</span><span id="sbarVal">0 km/h</span><span>250</span></div>
+      <div class="sbar-track"><div class="sbar-fill" id="sBar"></div></div>
+    </div>
+    <div class="gear-panel">
+      <div class="gear-panel-title">MARCIA PER LA PROVA</div>
+      <div class="gear-row" id="gearRow"><span style="font-size:10px;color:var(--muted)">Prima seleziona un'auto →</span></div>
+    </div>
+    <div class="controls">
+      <button class="btn-main start" id="mainBtn" onclick="toggleMeasure()">▶ AVVIA MISURA</button>
+      <button class="btn-sec" onclick="resetSession()">↺ RESET</button>
+    </div>
+    <div class="info-box">
+      <strong>AUTO:</strong> <span id="infocar">Nessuna</span><br/>
+      <strong>MARCIA:</strong> <span id="infogear">—</span><br/>
+      <strong>RAPPORTO:</strong> <span id="inforatio">—</span><br/>
+      <strong>GOMME:</strong> <span id="infotyre">—</span>
+    </div>
+    <div class="disc-bottom">⚠ Solo su strade sicure. Rispetta il codice della strada.</div>
+  </div>
+
+  <!-- CHART -->
+  <div class="page" id="page-chart">
+    <div id="chartWrap"><div class="no-data"><div class="no-data-icon">📊</div><p>Nessun dato.<br/>Fai una misurazione prima.</p></div></div>
+  </div>
+
+  <!-- RUNS -->
+  <div class="page" id="page-runs">
+    <div class="sec-ttl">SESSIONI SALVATE</div>
+    <div class="run-list" id="runList"><div class="no-data"><div class="no-data-icon">🏁</div><p>Nessuna sessione ancora.</p></div></div>
+  </div>
+
+  <!-- CARS -->
+  <div class="page" id="page-cars">
+    <div class="sec-ttl">DATABASE AUTO</div>
+    <div class="car-list" id="carList"></div>
+    <div class="car-form">
+      <div class="form-ttl">+ AGGIUNGI AUTO</div>
+      <div class="fr2">
+        <div class="fr"><label>Marca</label><input id="cMake" placeholder="BMW"/></div>
+        <div class="fr"><label>Modello</label><input id="cModel" placeholder="M3"/></div>
+      </div>
+      <div class="fr3">
+        <div class="fr"><label>Anno</label><input type="number" id="cYear" placeholder="2023"/></div>
+        <div class="fr"><label>Massa (kg)</label><input type="number" id="cMass" placeholder="1500"/></div>
+        <div class="fr"><label>CV dich.</label><input type="number" id="cHp" placeholder="300"/></div>
+      </div>
+      <div class="fr3">
+        <div class="fr"><label>Trazione</label>
+          <select id="cDrive"><option value="RWD">RWD</option><option value="FWD">FWD</option><option value="AWD">AWD</option></select>
+        </div>
+        <div class="fr"><label>Cilindri 🎙️</label>
+          <select id="cCyl"><option value="3">3</option><option value="4" selected>4</option><option value="5">5</option><option value="6">6</option><option value="8">8</option><option value="10">10</option><option value="12">12</option></select>
+        </div>
+        <div class="fr"><label>Gomme</label><input id="cTyre" placeholder="225/45R17"/></div>
+      </div>
+      <div class="ratios-wrap">
+        <div class="ratios-ttl">Rapporti di trasmissione</div>
+        <div class="ratios-hint">Rapporto di ogni marcia × rapporto finale. Lascia vuote le marce non presenti.</div>
+        <div class="grrow"><div class="grlbl">Finale</div><input type="number" step="0.001" id="rFinal" placeholder="es. 3.91"/></div>
+        <div id="gearInputs"></div>
+      </div>
+      <button class="btn-add" onclick="addCar()">AGGIUNGI AL DATABASE</button>
+    </div>
+  </div>
+</div><!-- /mainApp -->
+
+<!-- ══════════ CAR MODE SCREEN ══════════ -->
+<div id="carModeScreen">
+
+  <!-- Top bar: always visible -->
+  <div class="cm-topbar">
+    <div class="cm-logo-sm">GPSDYNO</div>
+    <div class="cm-settings-row">
+      <span>Max:</span><input type="number" id="rpmMax" value="8000" step="500" onchange="redrawTacho()"/>
+      <span>Redline:</span><input type="number" id="rpmRedline" value="7000" step="500" onchange="redrawTacho()"/>
+    </div>
+    <button class="cm-exit" onclick="closeCarMode()">✕ ESCI</button>
+  </div>
+
+  <!-- LEFT: gear + mic -->
+  <div class="cm-left">
+    <div style="text-align:center">
+      <div class="cm-gear-num" id="cmGearNum">—</div>
+      <div class="cm-gear-lbl">MARCIA</div>
+    </div>
+
+    <div class="mic-pill" id="micPill" onclick="toggleMic()">
+      <div class="mic-dot" id="micDot"></div>
+      <span id="micLabel">MIC OFF</span>
+    </div>
+
+    <div class="conf-wrap" id="confWrap" style="display:none">
+      <div class="conf-lbl">CONFIDENZA</div>
+      <div class="conf-bar"><div class="conf-fill" id="confFill"></div></div>
     </div>
   </div>
 
-  <div class="gauge-grid">
-    <div class="gauge-card speed">
-      <div class="gauge-label">VELOCITÀ</div>
-      <div class="gauge-value" id="gaugeSpeed">0</div>
-      <div class="gauge-unit">km/h</div>
-    </div>
-    <div class="gauge-card rpm">
-      <div class="gauge-label">REGIME</div>
-      <div class="gauge-value" id="gaugeRpm">—</div>
-      <div class="gauge-unit">RPM</div>
-    </div>
-    <div class="gauge-card power">
-      <div class="gauge-label">POT. MOTORE</div>
-      <div class="gauge-value" id="gaugePower">—</div>
-      <div class="gauge-unit">CV (PS)</div>
-    </div>
-    <div class="gauge-card torque">
-      <div class="gauge-label">COPPIA MOTORE</div>
-      <div class="gauge-value" id="gaugeTorque">—</div>
-      <div class="gauge-unit" id="gaugeTorqueUnit">Nm</div>
-    </div>
-    <div class="gauge-card" style="--accent:var(--orange)">
-      <div class="gauge-label">POT. RUOTE</div>
-      <div class="gauge-value" id="gaugePowerWheel">—</div>
-      <div class="gauge-unit">CV (PS)</div>
-    </div>
-    <div class="gauge-card" style="--accent:var(--orange)">
-      <div class="gauge-label">PERD. TRASMISS.</div>
-      <div class="gauge-value" id="gaugeDrivetrainLoss">—</div>
-      <div class="gauge-unit">%</div>
+  <!-- CENTER: tachometer -->
+  <div class="cm-center">
+    <div class="tacho-wrap">
+      <canvas id="tachoCanvas"></canvas>
+      <div class="tacho-center">
+        <div class="tacho-rpm-val" id="cmRpmVal">0</div>
+        <div class="tacho-rpm-unit">RPM</div>
+        <div class="mic-freq-badge" id="micFreqBadge" style="display:none">
+          🎙️ <span class="mic-freq-val" id="micFreqVal">—</span> Hz
+        </div>
+      </div>
     </div>
   </div>
 
-  <!-- Slope + correction indicator -->
-  <div id="slopeBox" style="display:none;margin-bottom:12px;background:rgba(255,208,0,0.06);border:1px solid rgba(255,208,0,0.2);border-radius:8px;padding:10px 14px;font-size:11px;color:#aaa;display:flex;align-items:center;gap:10px">
-    <span style="font-size:16px">⛰</span>
-    <div>
-      <span style="color:var(--yellow);font-family:'Orbitron',sans-serif;font-size:13px" id="slopeVal">0.0°</span>
-      <span style="color:var(--muted);margin-left:6px">pendenza</span>
-      <span style="margin-left:10px;color:var(--muted)" id="slopeCorr"></span>
+  <!-- RIGHT: numeric gauges -->
+  <div class="cm-right">
+    <div class="cm-gauge cm-speed">
+      <div class="cm-glbl">VELOCITÀ</div>
+      <div class="cm-gval" id="cmSpeed">0</div>
+      <div class="cm-gunit">km/h</div>
+    </div>
+    <div class="cm-gauge cm-power">
+      <div class="cm-glbl">POTENZA</div>
+      <div class="cm-gval" id="cmPower">—</div>
+      <div class="cm-gunit">CV</div>
+    </div>
+    <div class="cm-gauge cm-torque">
+      <div class="cm-glbl">COPPIA</div>
+      <div class="cm-gval" id="cmTorque">—</div>
+      <div class="cm-gunit">Nm</div>
     </div>
   </div>
 
-  <div class="speed-bar-wrap">
-    <div class="speed-bar-label">
-      <span>0 km/h</span>
-      <span id="speedBarVal">0 km/h</span>
-      <span>250 km/h</span>
-    </div>
-    <div class="speed-bar-track">
-      <div class="speed-bar-fill" id="speedBar"></div>
-    </div>
-  </div>
+</div><!-- /carModeScreen -->
 
-  <div class="controls">
-    <button class="btn-main start" id="mainBtn" onclick="toggleMeasure()">▶ AVVIA MISURA</button>
-    <button class="btn-secondary" onclick="resetSession()">↺ RESET SESSION</button>
-  </div>
-
-  <div class="info-box">
-    <strong>AUTO:</strong> <span id="selectedCarInfo">Nessuna — vai su AUTO</span><br />
-    <strong>METODO:</strong> GPS + altimetria · F = ma + Faero + Froll + Fpendenza<br />
-    <strong>AERO:</strong> <span id="infoAero">Cd=0.30 · A=2.2m²</span> (da dati auto)<br />
-    <strong>PERDITE:</strong> <span id="infoDrivetrainLoss">—</span> in base alla trazione<br />
-    <strong>NOTE:</strong> Accelera su rettilineo nella marcia selezionata da 30 km/h
-  </div>
-
-  <div class="disclaimer">
-    ⚠ Usa solo in condizioni di sicurezza. Rispetta il codice della strada.<br />
-    La pendenza è corretta in tempo reale tramite altimetria GPS.
+<!-- GEAR MODAL -->
+<div class="overlay" id="gearOverlay">
+  <div class="modal">
+    <div class="modal-ttl">SELEZIONA MARCIA</div>
+    <div class="modal-sub" id="gearModalSub">Scegli la marcia con cui eseguirai la prova.</div>
+    <div class="mg-list" id="gearModalList"></div>
+    <hr class="sep"/>
+    <button class="btn-cancel" onclick="closeGearModal()">ANNULLA</button>
   </div>
 </div>
 
-<!-- ═══ PAGE: CHART ═══ -->
-<div class="page" id="page-chart">
-  <div id="chartWrap">
-    <div class="no-data">
-      <div class="no-data-icon">📊</div>
-      <p>Nessun dato disponibile.<br />Esegui una misurazione<br />nella scheda MISURA.</p>
+<!-- WIZARD MODAL -->
+<div class="overlay" id="wizOverlay">
+  <div class="modal">
+    <div class="modal-ttl">🔍 CALCOLO RAPPORTO</div>
+    <div class="modal-sub">Non conosci il rapporto? Lo calcoliamo da RPM e velocità.</div>
+    <div class="wizard-box">
+      <div class="wiz-ttl">METODO: RPM a velocità costante</div>
+      <div class="wiz-body">Guida su rettilineo piano a velocità costante nella marcia desiderata e annota gli RPM del contagiri.</div>
+      <div class="fr2">
+        <div class="fr"><label>Velocità (km/h)</label><input type="number" id="wSpeed" value="60" placeholder="60"/></div>
+        <div class="fr"><label>RPM contagiri</label><input type="number" id="wRpm" placeholder="2000"/></div>
+      </div>
+      <div class="fr"><label>Numero marcia</label>
+        <select id="wGear"><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option><option>6</option><option>7</option></select>
+      </div>
+      <button class="btn-wiz" onclick="calcWizard()">CALCOLA RAPPORTO</button>
     </div>
+    <div class="wiz-result" id="wizResult"></div>
+    <hr class="sep"/>
+    <button class="btn-cancel" onclick="closeWizardModal()">ANNULLA</button>
   </div>
-</div>
-
-<!-- ═══ PAGE: RUNS ═══ -->
-<div class="page" id="page-runs">
-  <div class="section-title">SESSIONI SALVATE</div>
-  <div class="run-list" id="runList">
-    <div class="no-data">
-      <div class="no-data-icon">🏁</div>
-      <p>Nessuna sessione ancora.</p>
-    </div>
-  </div>
-</div>
-
-<!-- ═══ PAGE: CARS ═══ -->
-<div class="page" id="page-cars">
-
-  <div class="section-title">DATABASE AUTO</div>
-  <div class="car-list" id="carList"></div>
-
-  <div class="add-car-form">
-    <div class="form-title">+ AGGIUNGI AUTO</div>
-    <div class="form-row">
-      <label>Marca</label>
-      <input type="text" id="carMake" placeholder="es. BMW" />
-    </div>
-    <div class="form-row-2">
-      <div>
-        <label>Modello</label>
-        <input type="text" id="carModel" placeholder="es. M3" />
-      </div>
-      <div>
-        <label>Anno</label>
-        <input type="number" id="carYear" placeholder="2023" min="1950" max="2099" />
-      </div>
-    </div>
-    <div class="form-row-2">
-      <div>
-        <label>Massa (kg)</label>
-        <input type="number" id="carMass" placeholder="1500" min="500" max="5000" />
-      </div>
-      <div>
-        <label>Trazione</label>
-        <select id="carDrive">
-          <option value="RWD">RWD</option>
-          <option value="FWD">FWD</option>
-          <option value="AWD">AWD</option>
-        </select>
-      </div>
-    </div>
-    <div class="form-row">
-      <label>CV dichiarati (opzionale)</label>
-      <input type="number" id="carHp" placeholder="es. 400" min="20" max="2000" />
-    </div>
-
-    <!-- Aerodynamic + rolling params -->
-    <div class="form-title" style="margin-top:16px;color:var(--orange)">PARAMETRI FISICI (opzionali)</div>
-    <div class="modal-subtitle" style="margin-bottom:12px">
-      Lascia vuoto per usare valori generici. Più precisi = risultati migliori.
-    </div>
-    <div class="form-row-3">
-      <div>
-        <label>Cd aerodinamico</label>
-        <input type="number" id="carCd" placeholder="0.30" step="0.01" min="0.1" max="0.9" />
-      </div>
-      <div>
-        <label>Area front. (m²)</label>
-        <input type="number" id="carFrontalArea" placeholder="2.2" step="0.05" min="1.0" max="4.0" />
-      </div>
-      <div>
-        <label>Crr rotolamento</label>
-        <input type="number" id="carCrr" placeholder="0.013" step="0.001" min="0.005" max="0.04" />
-      </div>
-    </div>
-    <div class="form-title" style="margin-top:16px;color:var(--yellow)">RAPPORTI CAMBIO (opzionali)</div>
-    <div class="modal-subtitle" style="margin-bottom:12px">
-      Inserisci il rapporto complessivo di ogni marcia (rapporto cambio × differenziale).<br/>
-      Se non li conosci, potrai calibrarli dopo con il wizard.
-    </div>
-    <div id="gearRatioInputs">
-      <!-- generated by JS -->
-    </div>
-    <div class="form-row-2" style="margin-bottom:0">
-      <div>
-        <label>N° marce</label>
-        <select id="numGearsSelect" onchange="renderGearRatioInputs()">
-          <option value="5">5 marce</option>
-          <option value="6" selected>6 marce</option>
-          <option value="7">7 marce</option>
-          <option value="8">8 marce</option>
-        </select>
-      </div>
-      <div>
-        <label>Rapporto finale</label>
-        <input type="number" id="finalDriveInput" placeholder="es. 3.73" step="0.01" min="1" max="8" />
-      </div>
-    </div>
-
-    <button class="btn-add" id="addCarBtn" style="margin-top:12px" onclick="addCar()">AGGIUNGI AL DATABASE</button>
-  </div>
-</div>
-
-<!-- ════════════════════════════════════
-     MODAL: GEAR SELECTION
-═════════════════════════════════════ -->
-<div class="modal-overlay" id="modalGear">
-  <div class="modal-sheet">
-    <div class="modal-handle"></div>
-    <div class="modal-title">SELEZIONA MARCIA</div>
-    <div class="modal-subtitle">Scegli la marcia con cui eseguirai la prova di potenza.</div>
-    <div class="gear-grid" id="gearGrid"></div>
-    <div class="modal-actions">
-      <button class="btn-modal-ghost" onclick="closeModal('modalGear')">ANNULLA</button>
-    </div>
-  </div>
-</div>
-
-<!-- ════════════════════════════════════
-     MODAL: TIRE SIZE
-═════════════════════════════════════ -->
-<div class="modal-overlay" id="modalTire">
-  <div class="modal-sheet">
-    <div class="modal-handle"></div>
-    <div class="modal-title">GOMMATURA PNEUMATICO</div>
-    <div class="modal-subtitle">
-      Inserisci la misura del pneumatico (es. <strong>225/55 R17</strong>).<br/>
-      La trovi sul fianco della gomma o nel libretto.
-    </div>
-
-    <div class="form-row-3" style="margin-top:16px">
-      <div>
-        <label>Larghezza (mm)</label>
-        <input type="number" id="tireWidth" placeholder="225" min="100" max="400" />
-      </div>
-      <div>
-        <label>Profilo (%)</label>
-        <input type="number" id="tireProfile" placeholder="55" min="20" max="90" />
-      </div>
-      <div>
-        <label>Cerchio (pollici)</label>
-        <input type="number" id="tireRim" placeholder="17" min="12" max="24" />
-      </div>
-    </div>
-
-    <div class="tire-preview" id="tirePreview">
-      <div class="tire-preview-title">CALCOLO CIRCONFERENZA</div>
-      <div class="tire-preview-row">
-        <span>Altezza spalla</span>
-        <span id="prevSidewall">—</span>
-      </div>
-      <div class="tire-preview-row">
-        <span>Diametro totale</span>
-        <span id="prevDiameter">—</span>
-      </div>
-      <div class="tire-preview-row">
-        <span>Circonferenza</span>
-        <span id="prevCircumference">—</span>
-      </div>
-      <div class="tire-preview-row">
-        <span>Raggio di rotolamento</span>
-        <span id="prevRadius">—</span>
-      </div>
-    </div>
-
-    <div class="modal-actions">
-      <button class="btn-modal-primary" onclick="confirmTire()">CONFERMA</button>
-      <button class="btn-modal-ghost" onclick="closeModal('modalTire')">ANNULLA</button>
-    </div>
-  </div>
-</div>
-
-<!-- ════════════════════════════════════
-     MODAL: RATIO SELECTION / CALIBRATION
-═════════════════════════════════════ -->
-<div class="modal-overlay" id="modalRatio">
-  <div class="modal-sheet">
-    <div class="modal-handle"></div>
-    <div class="modal-title" id="ratioModalTitle">RAPPORTO MARCIA</div>
-    <div class="modal-subtitle" id="ratioModalSubtitle">Seleziona il rapporto complessivo per la marcia scelta.</div>
-
-    <!-- View A: rapporti dal database -->
-    <div id="ratioViewDB">
-      <div class="ratio-list" id="ratioDBList"></div>
-      <div class="modal-actions">
-        <button class="btn-modal-primary" onclick="confirmRatioFromDB()">CONFERMA</button>
-        <button class="btn-modal-secondary" onclick="showRatioViewManual()">INSERISCI MANUALMENTE</button>
-        <button class="btn-modal-secondary" onclick="showRatioViewWizard()">NON CONOSCO I RAPPORTI</button>
-        <button class="btn-modal-ghost" onclick="closeModal('modalRatio')">ANNULLA</button>
-      </div>
-    </div>
-
-    <!-- View B: inserimento manuale -->
-    <div id="ratioViewManual" style="display:none">
-      <div class="form-row" style="margin-top:12px">
-        <label>Rapporto complessivo marcia <span id="manualGearLabel">—</span></label>
-        <input type="number" id="manualRatioInput" placeholder="es. 8.64" step="0.01" min="1" max="30" />
-      </div>
-      <div class="modal-subtitle" style="margin-top:8px">
-        Rapporto complessivo = rapporto cambio × rapporto finale (differenziale).<br/>
-        Esempio: 3ª marcia 2.32 × diff 3.73 = <strong>8.65</strong>
-      </div>
-      <div class="modal-actions">
-        <button class="btn-modal-primary" onclick="confirmRatioManual()">CONFERMA</button>
-        <button class="btn-modal-ghost" onclick="showRatioViewDB()">← INDIETRO</button>
-      </div>
-    </div>
-
-    <!-- View C: wizard calibrazione -->
-    <div id="ratioViewWizard" style="display:none">
-      <div id="wizardStep1">
-        <div class="wizard-step">
-          <div class="wizard-step-title">PASSO 1 — VELOCITÀ DI RIFERIMENTO</div>
-          <div class="wizard-step-body">
-            A quale velocità vuoi effettuare la calibrazione?<br/>
-            Scegli una velocità <strong>comoda e sicura</strong> da mantenere stabilmente in marcia <span id="wizGearLabel">—</span>.
-          </div>
-        </div>
-        <div class="form-row" style="margin-top:12px">
-          <label>Velocità di calibrazione (km/h)</label>
-          <input type="number" id="wizCalibSpeedInput" placeholder="es. 80" min="20" max="200" />
-        </div>
-        <div class="modal-actions">
-          <button class="btn-modal-primary" onclick="wizardStep2()">AVANTI →</button>
-          <button class="btn-modal-ghost" onclick="showRatioViewDB()">← INDIETRO</button>
-        </div>
-      </div>
-
-      <div id="wizardStep2" style="display:none">
-        <div class="wizard-step">
-          <div class="wizard-step-title">PASSO 2 — RAGGIUNGI LA VELOCITÀ</div>
-          <div class="wizard-step-body">
-            Porta l'auto a <strong id="wizTargetSpeedLabel">—</strong> km/h nella marcia <span id="wizGearLabel2">—</span> e mantienila costante.<br/>
-            Quando sei in regime stabile, guarda il contagiri e inserisci gli RPM.
-          </div>
-        </div>
-        <div class="live-speed-display" id="wizLiveSpeed">—</div>
-        <div class="live-speed-unit">km/h (GPS)</div>
-        <div class="form-row" style="margin-top:12px">
-          <label>Giri motore a <span id="wizTargetSpeedLabel2">—</span> km/h (RPM)</label>
-          <input type="number" id="wizRpmInput" placeholder="es. 2800" min="500" max="9000" />
-        </div>
-        <div class="modal-subtitle">
-          Leggi il valore sul contagiri dell'auto mentre mantieni la velocità costante.
-        </div>
-        <div class="modal-actions">
-          <button class="btn-modal-primary" onclick="wizardConfirm()">CALCOLA RAPPORTO ✓</button>
-          <button class="btn-modal-ghost" onclick="wizardBack()">← INDIETRO</button>
-        </div>
-      </div>
-
-      <div id="wizardStep3" style="display:none">
-        <div class="wizard-step" style="border-color:rgba(0,255,136,0.3);background:rgba(0,255,136,0.05)">
-          <div class="wizard-step-title" style="color:var(--green)">✓ RAPPORTO CALCOLATO</div>
-          <div class="wizard-step-body">
-            Basandosi su <strong id="wizResultSpeed">—</strong> km/h @ <strong id="wizResultRpm">—</strong> RPM<br/>
-            con pneumatico <strong id="wizResultTire">—</strong>:
-          </div>
-        </div>
-        <div style="text-align:center;margin:16px 0">
-          <div style="font-size:10px;color:var(--muted);letter-spacing:2px;margin-bottom:6px">RAPPORTO COMPLESSIVO</div>
-          <div style="font-family:'Orbitron',sans-serif;font-size:42px;font-weight:900;color:var(--green)" id="wizResultRatio">—</div>
-          <div style="font-size:10px;color:var(--muted);margin-top:4px">giri motore / giro ruota</div>
-        </div>
-        <div class="modal-actions">
-          <button class="btn-modal-primary" onclick="confirmRatioWizard()">USA QUESTO RAPPORTO ✓</button>
-          <button class="btn-modal-ghost" onclick="wizardBack2()">← RICALIBRARE</button>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-
-<!-- ═══ PAGE: CAR MODE ═══ -->
-<div class="page" id="page-carmode">
-
-  <div class="car-mode-layout">
-
-    <div class="car-side-card">
-      <div class="car-side-label">POTENZA</div>
-      <div class="car-side-value" id="carModePower">0</div>
-      <div class="car-side-unit">CV</div>
-    </div>
-
-    <div class="tach-wrap">
-      <canvas id="tachCanvas" width="700" height="700"></canvas>
-
-      <div class="tach-center">
-        <div class="tach-speed" id="carModeSpeed">0</div>
-        <div class="tach-speed-unit">KM/H</div>
-        <div class="tach-gear" id="carModeGear">N</div>
-      </div>
-    </div>
-
-    <div class="car-side-card">
-      <div class="car-side-label">COPPIA</div>
-      <div class="car-side-value" id="carModeTorque">0</div>
-      <div class="car-side-unit">Nm</div>
-    </div>
-
-  </div>
-
-  <div class="car-mode-bottom">
-    <div class="car-pill" id="carModeRpm">RPM: 0</div>
-    <div class="car-pill" id="carModeMic">🎤 MIC OFF</div>
-    <div class="car-pill" id="carModeRedline">REDLINE: 8000</div>
-  </div>
-
-  <div class="controls" style="margin-top:20px">
-    <button class="btn-main start" onclick="toggleMicDetection()">🎤 AUDIO RPM</button>
-  </div>
-
 </div>
 
 <script>
-// ═══════════════════════════════════════════
+'use strict';
+// ═══════════════════════════════════════════════════════
+// CONSTANTS
+// ═══════════════════════════════════════════════════════
+const CD=0.30,FRONT=2.2,RHO=1.225,ROLL=0.013,G=9.81,DL=0.15,MAX_G=7;
+
+// ═══════════════════════════════════════════════════════
 // STATE
-// ═══════════════════════════════════════════
-let state = {
-  measuring: false,
-  gpsActive: false,
-  watchId: null,
-  lastPos: null,
-  lastTime: null,
-  speed: 0,        // m/s
-  accel: 0,        // m/s²
-  dataPoints: [],  // { speed_kmh, rpm, accel, power_cv, torque_nm, timestamp }
-  sessionStartTime: null,
-  selectedCar: null,
-  cars: [],
-  runs: [],
-  // Test configuration
-  selectedGear: null,       // number 1-8
-  tireWidth: null,          // mm
-  tireProfile: null,        // %
-  tireRim: null,            // inches
-  tireCircumference: null,  // meters
-  tireRadius: null,         // meters (rolling radius)
-  overallRatio: null,       // total gear ratio (gearbox × final drive)
+// ═══════════════════════════════════════════════════════
+const S={
+  measuring:false,gpsActive:false,watchId:null,
+  speed:0,lastSpeed:0,lastTime:null,
+  points:[],sessionT:null,
+  car:null,gear:null,totalRatio:null,wheelR:null,
+  cars:[],runs:[],
+  // live
+  liveKmh:0,liveCv:0,liveTorque:0,liveRpm:0,
 };
 
-// Wizard temp state
-let wizCalibSpeed = null;  // km/h
-let wizCalibRpm   = null;
-let wizCalibRatio = null;
+// Car Mode state
+let carModeOpen=false;
+let tachoRAF=null;
+let smoothedRpm=0; // for needle smoothing
 
-// ═══════════════════════════════════════════
-// PERSISTENCE
-// ═══════════════════════════════════════════
-function save() {
-  localStorage.setItem('gpsdyno_cars', JSON.stringify(state.cars));
-  localStorage.setItem('gpsdyno_runs', JSON.stringify(state.runs));
-  // Save test config
-  localStorage.setItem('gpsdyno_testcfg', JSON.stringify({
-    selectedGear: state.selectedGear,
-    tireWidth: state.tireWidth,
-    tireProfile: state.tireProfile,
-    tireRim: state.tireRim,
-    tireCircumference: state.tireCircumference,
-    tireRadius: state.tireRadius,
-    overallRatio: state.overallRatio,
-  }));
+// ─── MIC / FFT state ──────────────────────────────────
+let micStream=null;
+let audioCtx=null;
+let analyser=null;
+let micActive=false;
+let micRafId=null;
+let lastMicRpm=0;      // rpm from FFT
+let micConfidence=0;   // 0-1
+let detectedGear=null;
+// history for gear confirmation (avoid flickering)
+const GEAR_CONFIRM_FRAMES=8;
+let gearVotes={}; // {gearNum: count}
+
+// ═══════════════════════════════════════════════════════
+// DISCLAIMER
+// ═══════════════════════════════════════════════════════
+function onCheckChange(){
+  const ok=document.getElementById('agreeCheck').checked;
+  const btn=document.getElementById('enterBtn');
+  btn.disabled=!ok;
+  btn.classList.toggle('ready',ok);
+}
+function enterApp(){
+  document.getElementById('disclaimerScreen').style.display='none';
+  document.getElementById('mainApp').style.display='block';
+  load();buildGearInputs();renderCarList();
+  if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
 }
 
-function load() {
-  try {
-    state.cars = JSON.parse(localStorage.getItem('gpsdyno_cars') || '[]');
-    state.runs = JSON.parse(localStorage.getItem('gpsdyno_runs') || '[]');
-    const cfg  = JSON.parse(localStorage.getItem('gpsdyno_testcfg') || '{}');
-    if (cfg.selectedGear)      state.selectedGear      = cfg.selectedGear;
-    if (cfg.tireWidth)         state.tireWidth         = cfg.tireWidth;
-    if (cfg.tireProfile)       state.tireProfile       = cfg.tireProfile;
-    if (cfg.tireRim)           state.tireRim           = cfg.tireRim;
-    if (cfg.tireCircumference) state.tireCircumference = cfg.tireCircumference;
-    if (cfg.tireRadius)        state.tireRadius        = cfg.tireRadius;
-    if (cfg.overallRatio)      state.overallRatio      = cfg.overallRatio;
-  } catch(e) {}
-  if (state.cars.length === 0) seedDefaultCars();
-  updateTestConfigUI();
+// ═══════════════════════════════════════════════════════
+// TYRE
+// ═══════════════════════════════════════════════════════
+function parseTyre(s){
+  const m=(s||'').trim().toUpperCase().match(/^(\d+)\/(\d+)R(\d+)$/);
+  if(!m) return null;
+  return(+m[3]*25.4+2*(+m[1])*(+m[2]/100))/2/1000;
 }
 
-// ═══════════════════════════════════════════
-// SEED CARS (with gear ratios)
-// ═══════════════════════════════════════════
-function seedDefaultCars() {
-  state.cars = [
-    {
-      id: 1, make: 'VW', model: 'Golf GTI', year: 2021, mass: 1340, drive: 'FWD', hp: 245,
-      cd: 0.28, frontalArea: 2.19, crr: 0.012,
-      numGears: 6, finalDrive: 3.94,
-      gearRatios: [3.455, 1.947, 1.323, 1.027, 0.855, 0.733],
-    },
-    {
-      id: 2, make: 'BMW', model: '330i', year: 2022, mass: 1540, drive: 'RWD', hp: 258,
-      cd: 0.26, frontalArea: 2.25, crr: 0.012,
-      numGears: 8, finalDrive: 3.15,
-      gearRatios: [5.000, 3.200, 2.143, 1.720, 1.314, 1.000, 0.822, 0.640],
-    },
-    {
-      id: 3, make: 'Fiat', model: 'Punto 1.2', year: 2008, mass: 1020, drive: 'FWD', hp: 65,
-      cd: 0.32, frontalArea: 2.02, crr: 0.014,
-      numGears: 5, finalDrive: 3.94,
-      gearRatios: [3.909, 2.238, 1.520, 1.156, 0.971],
-    },
-    {
-      id: 4, make: 'Audi', model: 'RS6', year: 2023, mass: 2075, drive: 'AWD', hp: 600,
-      cd: 0.30, frontalArea: 2.44, crr: 0.012,
-      numGears: 8, finalDrive: 2.77,
-      gearRatios: [4.714, 3.143, 2.106, 1.667, 1.285, 1.000, 0.839, 0.667],
-    },
+// ═══════════════════════════════════════════════════════
+// PHYSICS
+// ═══════════════════════════════════════════════════════
+function calcPower(v,a,mass){
+  const Fw=mass*a+.5*RHO*CD*FRONT*v*v+ROLL*mass*G;
+  const Pe=Fw*v/(1-DL);
+  const cv=Math.max(Pe/735.499,0);
+  let rpm=null,torque=0;
+  if(S.totalRatio&&S.wheelR){
+    const oe=(v/S.wheelR)*S.totalRatio;
+    rpm=Math.max(oe*60/(2*Math.PI),0);
+    torque=oe>0?Math.max(Pe/oe,0):0;
+  } else {
+    torque=Math.max(Fw*(S.wheelR||.31),0);
+  }
+  return{cv,torque,rpm};
+}
+
+function speedRpmToGear(speedMs, rpm){
+  // Given speed and RPM, find which gear index matches best
+  const car=S.car;
+  if(!car||!car.gears||!car.gears.length||!S.wheelR) return null;
+  const fd=car.finalDrive||1;
+  let bestGear=null,bestDiff=Infinity;
+  car.gears.forEach((ratio,i)=>{
+    const total=ratio*fd;
+    const oe=(speedMs/S.wheelR)*total;
+    const expectedRpm=oe*60/(2*Math.PI);
+    const diff=Math.abs(expectedRpm-rpm);
+    if(diff<bestDiff){bestDiff=diff;bestGear=i+1;}
+  });
+  // Confidence: how close is the match (within 300rpm = high confidence)
+  const conf=Math.max(0,1-bestDiff/800);
+  return{gear:bestGear,confidence:conf};
+}
+
+// ═══════════════════════════════════════════════════════
+// MICROPHONE + FFT GEAR DETECTION
+// ═══════════════════════════════════════════════════════
+async function toggleMic(){
+  if(micActive) stopMic();
+  else await startMic();
+}
+
+async function startMic(){
+  try{
+    micStream=await navigator.mediaDevices.getUserMedia({audio:{
+      echoCancellation:false,
+      noiseSuppression:false,
+      autoGainControl:false,
+    }});
+    audioCtx=new (window.AudioContext||window.webkitAudioContext)({sampleRate:44100});
+    analyser=audioCtx.createAnalyser();
+    analyser.fftSize=8192;         // high resolution
+    analyser.smoothingTimeConstant=0.6;
+    const src=audioCtx.createMediaStreamSource(micStream);
+    src.connect(analyser);
+    micActive=true;
+    updateMicUI(true);
+    document.getElementById('confWrap').style.display='block';
+    document.getElementById('micFreqBadge').style.display='block';
+    micRafId=requestAnimationFrame(micLoop);
+  }catch(e){
+    alert('Impossibile accedere al microfono: '+e.message);
+  }
+}
+
+function stopMic(){
+  micActive=false;
+  if(micRafId){cancelAnimationFrame(micRafId);micRafId=null;}
+  if(micStream){micStream.getTracks().forEach(t=>t.stop());micStream=null;}
+  if(audioCtx){audioCtx.close();audioCtx=null;}
+  analyser=null;
+  updateMicUI(false);
+  document.getElementById('confWrap').style.display='none';
+  document.getElementById('micFreqBadge').style.display='none';
+  document.getElementById('confFill').style.width='0%';
+  lastMicRpm=0;micConfidence=0;detectedGear=null;gearVotes={};
+}
+
+function updateMicUI(active){
+  const pill=document.getElementById('micPill');
+  const lbl=document.getElementById('micLabel');
+  pill.classList.toggle('active',active);
+  lbl.textContent=active?'MIC ON':'MIC OFF';
+}
+
+function micLoop(){
+  if(!micActive||!analyser){return;}
+  micRafId=requestAnimationFrame(micLoop);
+
+  const sr=audioCtx.sampleRate;
+  const buf=new Float32Array(analyser.fftSize);
+  const fftBuf=new Float32Array(analyser.frequencyBinCount);
+  analyser.getFloatFrequencyData(fftBuf);
+
+  // ── Find dominant frequency in engine RPM range ──
+  // Combustion engines: firing freq = RPM/60 * cylinders/2
+  // For 4-cyl: RPM=800-7000 → firing 26-233Hz, fundamental ~13-117Hz
+  // We search the fundamental: 15-300 Hz (covers 4-cyl 450–9000rpm equivalent)
+  const freqPerBin=sr/analyser.fftSize;
+  const minBin=Math.floor(15/freqPerBin);
+  const maxBin=Math.floor(350/freqPerBin);
+
+  let peakBin=minBin;
+  let peakVal=-Infinity;
+  for(let i=minBin;i<=maxBin;i++){
+    if(fftBuf[i]>peakVal){peakVal=fftBuf[i];peakBin=i;}
+  }
+
+  // Signal quality: how prominent is the peak vs noise floor
+  const noiseFloor=fftBuf.slice(minBin,maxBin+1).reduce((s,v)=>s+v,0)/(maxBin-minBin+1);
+  const snr=peakVal-noiseFloor; // dB above noise
+  const signalGood=snr>8&&peakVal>-60; // at least 8dB above noise
+
+  const fundamentalHz=peakBin*freqPerBin;
+
+  // Estimate RPM from fundamental frequency
+  // For 4-cylinder 4-stroke: fundamental ≈ RPM/60 * 2 (2 power strokes/rev)
+  // Try to get cylinders from car, default 4
+  const cyl=(S.car&&S.car.cylinders)||4;
+  const strokesPerRev=cyl/2;
+  const rpmFromMic=fundamentalHz/strokesPerRev*60;
+
+  // Also check if 2x harmonic confirms it (common in engine noise)
+  const harmBin=peakBin*2;
+  const harmPresent=harmBin<fftBuf.length&&fftBuf[harmBin]>peakVal-15;
+  const harmBonus=harmPresent?1.2:1.0;
+
+  micConfidence=signalGood?(Math.min(snr/20,1)*harmBonus):0;
+  lastMicRpm=signalGood?rpmFromMic:lastMicRpm;
+
+  // Update UI
+  document.getElementById('micFreqVal').textContent=fundamentalHz.toFixed(1);
+  document.getElementById('confFill').style.width=Math.round(micConfidence*100)+'%';
+
+  // ── Gear detection ──
+  if(signalGood&&S.speed>5/3.6&&micConfidence>0.25){
+    const result=speedRpmToGear(S.speed,lastMicRpm);
+    if(result){
+      // Vote system: gear must appear consistently before switching
+      const g=result.gear;
+      if(!gearVotes[g]) gearVotes[g]=0;
+      gearVotes[g]++;
+      // Decay other gears
+      Object.keys(gearVotes).forEach(k=>{
+        if(+k!==g) gearVotes[k]=Math.max(0,(gearVotes[k]||0)-1);
+      });
+      // Find winner
+      const winner=Object.entries(gearVotes).sort((a,b)=>b[1]-a[1])[0];
+      if(winner&&winner[1]>=GEAR_CONFIRM_FRAMES){
+        const newGear=parseInt(winner[0]);
+        if(newGear!==detectedGear){
+          detectedGear=newGear;
+          onGearDetected(newGear,result.confidence);
+        }
+      }
+    }
+  } else {
+    // Slowly decay votes when no signal
+    Object.keys(gearVotes).forEach(k=>gearVotes[k]=Math.max(0,(gearVotes[k]||0)-0.5));
+  }
+
+  // Feed mic RPM into live display if confidence is high
+  if(micConfidence>0.4&&lastMicRpm>200){
+    S.liveRpm=lastMicRpm;
+  }
+}
+
+function onGearDetected(gearNum, confidence){
+  // Update gear display in car mode
+  document.getElementById('cmGearNum').textContent=gearNum;
+  // Optionally auto-set gear in S if confidence is very high
+  if(confidence>0.7&&S.car&&S.car.gears){
+    const fd=S.car.finalDrive||1;
+    const ratio=S.car.gears[gearNum-1];
+    if(ratio){
+      S.gear=gearNum;
+      S.totalRatio=ratio*fd;
+      // Also update the normal measure page
+      refreshGearUI(gearNum,ratio,S.totalRatio);
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// PERSIST
+// ═══════════════════════════════════════════════════════
+function save(){
+  localStorage.setItem('gd_cars',JSON.stringify(S.cars));
+  localStorage.setItem('gd_runs',JSON.stringify(S.runs));
+}
+function load(){
+  try{
+    S.cars=JSON.parse(localStorage.getItem('gd_cars')||'[]');
+    S.runs=JSON.parse(localStorage.getItem('gd_runs')||'[]');
+  }catch(e){}
+  if(!S.cars.length) seed();
+}
+function seed(){
+  S.cars=[
+    {id:1,make:'VW',model:'Golf GTI',year:2021,mass:1340,drive:'FWD',hp:245,tyre:'225/40R18',finalDrive:3.94,gears:[3.77,2.11,1.36,1.03,0.84,0.67],cylinders:4},
+    {id:2,make:'BMW',model:'330i',year:2022,mass:1540,drive:'RWD',hp:258,tyre:'225/45R17',finalDrive:3.46,gears:[4.17,2.34,1.52,1.14,0.87,0.69,0.58],cylinders:4},
+    {id:3,make:'Fiat',model:'Punto 1.2',year:2008,mass:1020,drive:'FWD',hp:65,tyre:'175/65R14',finalDrive:3.94,gears:[3.58,1.94,1.28,0.97,0.76],cylinders:4},
+    {id:4,make:'Audi',model:'RS6',year:2023,mass:2075,drive:'AWD',hp:600,tyre:'285/40R22',finalDrive:2.77,gears:[5.00,2.86,1.92,1.37,1.00,0.82,0.67],cylinders:8},
   ];
   save();
 }
 
-// ═══════════════════════════════════════════
-// TIRE MATH
-// ═══════════════════════════════════════════
-function calcTire(width, profile, rim) {
-  // sidewall height in mm
-  const sidewall = width * profile / 100;
-  // total diameter in mm: (2 × sidewall) + (rim in inches × 25.4)
-  const diameter = 2 * sidewall + rim * 25.4;
-  const circumference = Math.PI * diameter / 1000; // meters
-  const radius = diameter / 2 / 1000;              // meters
-  return { sidewall, diameter, circumference, radius };
+// ═══════════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════════
+function showPage(id,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  if(btn) btn.classList.add('active');
+  if(id==='chart') renderChart();
+  if(id==='cars'){buildGearInputs();renderCarList();}
+  if(id==='runs') renderRunList();
 }
-
-// ═══════════════════════════════════════════
-// RPM FROM SPEED
-// ═══════════════════════════════════════════
-function calcRpm(speed_ms, overallRatio, tireCircumference) {
-  if (!overallRatio || !tireCircumference) return null;
-  // wheel rotations per second
-  const wheelRps = speed_ms / tireCircumference;
-  // engine RPM
-  return wheelRps * overallRatio * 60;
-}
-
-// ═══════════════════════════════════════════
-// PAGE NAVIGATION
-// ═══════════════════════════════════════════
-function showPage(id) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
-  document.getElementById('page-' + id).classList.add('active');
-  event.target.classList.add('active');
-  if (id === 'chart') renderChart();
-  if (id === 'cars')  { renderCarList(); renderGearRatioInputs(); }
-  if (id === 'runs')  renderRunList();
-}
-
-// ═══════════════════════════════════════════
-// MODAL HELPERS
-// ═══════════════════════════════════════════
-function openModal(id) { document.getElementById(id).classList.add('visible'); }
-function closeModal(id) { document.getElementById(id).classList.remove('visible'); }
-
-// ═══════════════════════════════════════════
-// MODAL: GEAR SELECTION
-// ═══════════════════════════════════════════
-function openGearModal() {
-  if (!state.selectedCar) {
-    alert('Seleziona prima un\'auto nella scheda AUTO');
-    return;
-  }
-  const numGears = state.selectedCar.numGears || 6;
-  const grid = document.getElementById('gearGrid');
-  grid.innerHTML = '';
-  for (let g = 1; g <= numGears; g++) {
-    const btn = document.createElement('button');
-    btn.className = 'gear-btn' + (state.selectedGear === g ? ' selected' : '');
-    btn.textContent = g + (g === 1 ? 'ª' : 'ª');
-    btn.onclick = () => { selectGear(g); closeModal('modalGear'); };
-    grid.appendChild(btn);
-  }
-  openModal('modalGear');
-}
-
-function selectGear(g) {
-  state.selectedGear = g;
-  // Auto-fill ratio from DB if available
-  if (state.selectedCar && state.selectedCar.gearRatios && state.selectedCar.finalDrive) {
-    const gearboxRatio = state.selectedCar.gearRatios[g - 1];
-    if (gearboxRatio) {
-      state.overallRatio = gearboxRatio * state.selectedCar.finalDrive;
-    }
-  }
-  updateTestConfigUI();
-  save();
-}
-
-// ═══════════════════════════════════════════
-// MODAL: TIRE SIZE
-// ═══════════════════════════════════════════
-function openTireModal() {
-  if (state.tireWidth) document.getElementById('tireWidth').value   = state.tireWidth;
-  if (state.tireProfile) document.getElementById('tireProfile').value = state.tireProfile;
-  if (state.tireRim) document.getElementById('tireRim').value        = state.tireRim;
-  updateTirePreview();
-  ['tireWidth','tireProfile','tireRim'].forEach(id =>
-    document.getElementById(id).addEventListener('input', updateTirePreview)
-  );
-  openModal('modalTire');
-}
-
-function updateTirePreview() {
-  const w = parseFloat(document.getElementById('tireWidth').value);
-  const p = parseFloat(document.getElementById('tireProfile').value);
-  const r = parseFloat(document.getElementById('tireRim').value);
-  if (!w || !p || !r) { document.getElementById('tirePreview').classList.remove('visible'); return; }
-  const t = calcTire(w, p, r);
-  document.getElementById('tirePreview').classList.add('visible');
-  document.getElementById('prevSidewall').textContent       = t.sidewall.toFixed(0) + ' mm';
-  document.getElementById('prevDiameter').textContent       = t.diameter.toFixed(0) + ' mm';
-  document.getElementById('prevCircumference').textContent  = t.circumference.toFixed(3) + ' m';
-  document.getElementById('prevRadius').textContent         = t.radius.toFixed(3) + ' m';
-}
-
-function confirmTire() {
-  const w = parseFloat(document.getElementById('tireWidth').value);
-  const p = parseFloat(document.getElementById('tireProfile').value);
-  const r = parseFloat(document.getElementById('tireRim').value);
-  if (!w || !p || !r) { alert('Inserisci tutti e tre i valori della gomma.'); return; }
-  const t = calcTire(w, p, r);
-  state.tireWidth        = w;
-  state.tireProfile      = p;
-  state.tireRim          = r;
-  state.tireCircumference = t.circumference;
-  state.tireRadius       = t.radius;
-  updateTestConfigUI();
-  save();
-  closeModal('modalTire');
-}
-
-// ═══════════════════════════════════════════
-// MODAL: RATIO
-// ═══════════════════════════════════════════
-function openRatioModal() {
-  if (!state.selectedCar) { alert('Seleziona prima un\'auto nella scheda AUTO'); return; }
-  if (!state.selectedGear) { alert('Seleziona prima la marcia.'); return; }
-  showRatioViewDB();
-  openModal('modalRatio');
-}
-
-function showRatioViewDB() {
-  document.getElementById('ratioViewDB').style.display = '';
-  document.getElementById('ratioViewManual').style.display = 'none';
-  document.getElementById('ratioViewWizard').style.display = 'none';
-
-  const car = state.selectedCar;
-  const g   = state.selectedGear;
-
-  document.getElementById('ratioModalTitle').textContent    = `RAPPORTO ${g}ª MARCIA`;
-  document.getElementById('ratioModalSubtitle').textContent = car.gearRatios
-    ? `Dati dal database per ${car.make} ${car.model}`
-    : 'Nessun rapporto nel database per questa auto.';
-
-  const list = document.getElementById('ratioDBList');
-  list.innerHTML = '';
-
-  if (car.gearRatios && car.finalDrive) {
-    car.gearRatios.forEach((gr, i) => {
-      const overall  = gr * car.finalDrive;
-      const row      = document.createElement('div');
-      row.className  = 'ratio-row';
-      const isActive = (i + 1) === g;
-      row.innerHTML  = `
-        <div class="ratio-label" style="${isActive ? 'color:var(--red)' : ''}">${i+1}ª MARCIA</div>
-        <div>
-          <div style="font-size:10px;color:var(--muted)">${gr.toFixed(3)} × ${car.finalDrive.toFixed(3)}</div>
-        </div>
-        <div class="ratio-computed" style="${isActive ? 'color:var(--red)' : ''}">${overall.toFixed(2)}</div>
-      `;
-      if (isActive) {
-        row.style.background = 'rgba(255,32,32,0.05)';
-        row.style.borderRadius = '6px';
-        row.style.padding = '6px';
-      }
-      list.appendChild(row);
-    });
-  } else {
-    list.innerHTML = '<div style="color:var(--muted);font-size:11px;text-align:center;padding:16px">Nessun dato nel database.<br/>Inseriscili manualmente o usa il wizard.</div>';
-  }
-}
-
-let _dbRatioSelected = null;
-
-function confirmRatioFromDB() {
-  const car = state.selectedCar;
-  const g   = state.selectedGear;
-  if (car.gearRatios && car.finalDrive && car.gearRatios[g - 1]) {
-    state.overallRatio = car.gearRatios[g - 1] * car.finalDrive;
-    updateTestConfigUI();
-    save();
-    closeModal('modalRatio');
-  } else {
-    alert('Nessun rapporto disponibile per questa marcia. Inseriscilo manualmente o usa il wizard.');
-  }
-}
-
-function showRatioViewManual() {
-  document.getElementById('ratioViewDB').style.display = 'none';
-  document.getElementById('ratioViewManual').style.display = '';
-  document.getElementById('ratioViewWizard').style.display = 'none';
-  document.getElementById('manualGearLabel').textContent = state.selectedGear + 'ª';
-  if (state.overallRatio) document.getElementById('manualRatioInput').value = state.overallRatio.toFixed(2);
-}
-
-function confirmRatioManual() {
-  const v = parseFloat(document.getElementById('manualRatioInput').value);
-  if (!v || v < 1) { alert('Inserisci un rapporto valido (es. 8.64)'); return; }
-  state.overallRatio = v;
-  updateTestConfigUI();
-  save();
-  closeModal('modalRatio');
-}
-
-// ═══════════════════════════════════════════
-// CALIBRATION WIZARD
-// ═══════════════════════════════════════════
-function showRatioViewWizard() {
-  if (!state.tireCircumference) {
-    alert('Inserisci prima la gommatura (tasto GOMMATURA).');
-    return;
-  }
-  document.getElementById('ratioViewDB').style.display = 'none';
-  document.getElementById('ratioViewManual').style.display = 'none';
-  document.getElementById('ratioViewWizard').style.display = '';
-  document.getElementById('wizardStep1').style.display = '';
-  document.getElementById('wizardStep2').style.display = 'none';
-  document.getElementById('wizardStep3').style.display = 'none';
-  document.getElementById('wizGearLabel').textContent  = state.selectedGear + 'ª';
-  document.getElementById('wizGearLabel2').textContent = state.selectedGear + 'ª';
-}
-
-function wizardStep2() {
-  const spd = parseFloat(document.getElementById('wizCalibSpeedInput').value);
-  if (!spd || spd < 20 || spd > 200) { alert('Inserisci una velocità valida tra 20 e 200 km/h.'); return; }
-  wizCalibSpeed = spd;
-  document.getElementById('wizardStep1').style.display = 'none';
-  document.getElementById('wizardStep2').style.display = '';
-  document.getElementById('wizTargetSpeedLabel').textContent  = spd;
-  document.getElementById('wizTargetSpeedLabel2').textContent = spd;
-  startGPSForWizard();
-}
-
-function wizardBack() {
-  document.getElementById('wizardStep1').style.display = '';
-  document.getElementById('wizardStep2').style.display = 'none';
-  document.getElementById('wizardStep3').style.display = 'none';
-}
-
-function wizardBack2() {
-  document.getElementById('wizardStep1').style.display = '';
-  document.getElementById('wizardStep2').style.display = 'none';
-  document.getElementById('wizardStep3').style.display = 'none';
-}
-
-function wizardConfirm() {
-  const rpm = parseFloat(document.getElementById('wizRpmInput').value);
-  if (!rpm || rpm < 500 || rpm > 9000) { alert('Inserisci un valore RPM valido (500-9000).'); return; }
-  wizCalibRpm = rpm;
-  // Calculate overall ratio:
-  // rpm = (speed_ms / circumference) * ratio * 60
-  // ratio = rpm * circumference / (speed_ms * 60)
-  const speed_ms = wizCalibSpeed / 3.6;
-  wizCalibRatio  = rpm * state.tireCircumference / (speed_ms * 60);
-
-  document.getElementById('wizardStep2').style.display = 'none';
-  document.getElementById('wizardStep3').style.display = '';
-  document.getElementById('wizResultSpeed').textContent = wizCalibSpeed;
-  document.getElementById('wizResultRpm').textContent   = rpm;
-  document.getElementById('wizResultTire').textContent  = `${state.tireWidth}/${state.tireProfile} R${state.tireRim}`;
-  document.getElementById('wizResultRatio').textContent = wizCalibRatio.toFixed(2);
-}
-
-function confirmRatioWizard() {
-  state.overallRatio = wizCalibRatio;
-  updateTestConfigUI();
-  save();
-  closeModal('modalRatio');
-}
-
-function startGPSForWizard() {
-  if (!state.gpsActive) startGPS();
-}
-
-// Update wizard live speed display
-function updateWizardSpeed(speedKmh) {
-  const el = document.getElementById('wizLiveSpeed');
-  if (el) el.textContent = speedKmh.toFixed(0);
-}
-
-// ═══════════════════════════════════════════
-// UPDATE CONFIG UI
-// ═══════════════════════════════════════════
-function updateTestConfigUI() {
-  // Gear pill
-  const gp = document.getElementById('gearPillVal');
-  if (state.selectedGear) {
-    gp.textContent = state.selectedGear + 'ª';
-    document.getElementById('gearPill').classList.add('set');
-  } else {
-    gp.textContent = '—';
-    document.getElementById('gearPill').classList.remove('set');
-  }
-
-  // Tire pill
-  const tp = document.getElementById('tirePillVal');
-  if (state.tireWidth) {
-    tp.textContent = `${state.tireWidth}/${state.tireProfile}R${state.tireRim}`;
-    document.getElementById('tirePill').classList.add('set');
-  } else {
-    tp.textContent = '—';
-    document.getElementById('tirePill').classList.remove('set');
-  }
-
-  // Ratio pill
-  const rp = document.getElementById('ratioPillVal');
-  if (state.overallRatio) {
-    rp.textContent = state.overallRatio.toFixed(2);
-    document.getElementById('ratioPill').classList.add('set');
-  } else {
-    rp.textContent = '—';
-    document.getElementById('ratioPill').classList.remove('set');
-  }
-
-  // Badge
-  const badge = document.getElementById('gearRatioBadge');
-  if (state.selectedGear && state.tireWidth) {
-    badge.style.display = 'flex';
-    document.getElementById('badgeGear').textContent  = state.selectedGear + 'ª';
-    document.getElementById('badgeTire').textContent  = `${state.tireWidth}/${state.tireProfile} R${state.tireRim}`;
-    document.getElementById('badgeRatio').textContent = state.overallRatio
-      ? 'Rapporto: ' + state.overallRatio.toFixed(2)
-      : 'Rapporto: non impostato';
-  } else {
-    badge.style.display = 'none';
-  }
-}
-
-// ═══════════════════════════════════════════
-// GPS
-// ═══════════════════════════════════════════
-function startGPS() {
-  if (!('geolocation' in navigator)) {
-    alert('GPS non disponibile su questo dispositivo.');
-    return;
-  }
-  state.watchId = navigator.geolocation.watchPosition(onGPSUpdate, onGPSError, {
-    enableHighAccuracy: true,
-    maximumAge: 0,
-    timeout: 5000,
-  });
-}
-
-function stopGPS() {
-  if (state.watchId !== null) {
-    navigator.geolocation.clearWatch(state.watchId);
-    state.watchId = null;
-  }
-  setGPSStatus('inactive');
-}
-
-function onGPSUpdate(pos) {
-  const now = pos.timestamp;
-  const spd = pos.coords.speed || 0; // m/s
-  const speedKmh = spd * 3.6;
-  let accel = 0;
-
-  setGPSStatus(state.measuring ? 'measuring' : 'active');
-
-  if (state.lastPos && state.lastTime) {
-    const dt = (now - state.lastTime) / 1000;
-    if (dt > 0 && dt < 3) {
-      accel = (spd - state.speed) / dt;
-    }
-  }
-
-  state.speed    = spd;
-  state.accel    = accel;
-  state.lastPos  = pos;
-  state.lastTime = now;
-
-  // Slope estimation from altitude
-  const slopeRad = updateSlope(pos);
-  const slopeDeg = slopeRad * 180 / Math.PI;
-  const slopeBox = document.getElementById('slopeBox');
-  if (Math.abs(slopeDeg) > 0.3 && pos.coords.altitude) {
-    slopeBox.style.display = 'flex';
-    document.getElementById('slopeVal').textContent = (slopeDeg >= 0 ? '+' : '') + slopeDeg.toFixed(1) + '°';
-    const slopeForce = (state.selectedCar ? state.selectedCar.mass : 1400) * 9.81 * Math.sin(slopeRad);
-    document.getElementById('slopeCorr').textContent =
-      `corr. ${slopeForce >= 0 ? '+' : ''}${slopeForce.toFixed(0)} N`;
-  } else {
-    slopeBox.style.display = 'none';
-  }
-
-  // Update speed gauges
-  document.getElementById('gaugeSpeed').textContent   = speedKmh.toFixed(0);
-  document.getElementById('speedBar').style.width     = Math.min(speedKmh / 250 * 100, 100) + '%';
-  document.getElementById('speedBarVal').textContent  = speedKmh.toFixed(0) + ' km/h';
-
-  // Update wizard if open
-  updateWizardSpeed(speedKmh);
-
-  // Calculate RPM
-  const rpm = calcRpm(spd, state.overallRatio, state.tireCircumference);
-  if (rpm !== null) {
-    document.getElementById('gaugeRpm').textContent = Math.round(rpm);
-  } else {
-    document.getElementById('gaugeRpm').textContent = '—';
-  }
-
-  // Calculate power if car selected
-  if (state.selectedCar && accel > 0.3) {
-    const result = calcPower(spd, accel, state.selectedCar.mass, state.tireRadius, state.selectedCar, slopeRad, state.overallRatio);
-    document.getElementById('gaugePower').textContent      = result.cv_engine.toFixed(0);
-    document.getElementById('gaugeTorque').textContent     = result.torque_engine.toFixed(0);
-    document.getElementById('gaugeTorqueUnit').textContent = state.overallRatio ? 'Nm' : 'Nm (stima)';
-    document.getElementById('gaugePowerWheel').textContent = result.cv_wheel.toFixed(0);
-    document.getElementById('gaugeDrivetrainLoss').textContent = result.loss_pct.toFixed(0);
-
-    if (state.measuring && speedKmh >= 20 && speedKmh <= 250) {
-      state.dataPoints.push({
-        speed_kmh:   speedKmh,
-        rpm:         rpm || 0,
-        accel:       accel,
-        power_cv:    result.cv_engine,
-        power_wheel: result.cv_wheel,
-        torque_nm:   result.torque_engine,
-        timestamp:   now,
-        slope_deg:   slopeDeg,
-      });
-    }
-  } else if (!state.selectedCar) {
-    document.getElementById('gaugePower').textContent      = '—';
-    document.getElementById('gaugeTorque').textContent     = '—';
-    document.getElementById('gaugePowerWheel').textContent = '—';
-    document.getElementById('gaugeDrivetrainLoss').textContent = '—';
-  }
-}
-
-function onGPSError(err) {
-  setGPSStatus('inactive');
-  console.warn('GPS error', err);
-}
-
-function setGPSStatus(s) {
-  const dot = document.getElementById('gpsDot');
-  const lbl = document.getElementById('gpsLabel');
-  dot.className = 'gps-dot';
-  if (s === 'active')    { dot.classList.add('active');    lbl.textContent = 'GPS OK'; }
-  else if (s === 'measuring') { dot.classList.add('measuring'); lbl.textContent = 'REC'; }
-  else { lbl.textContent = 'NO GPS'; }
-  state.gpsActive = s !== 'inactive';
-}
-
-// ═══════════════════════════════════════════
-// MEASURE CONTROL
-// ═══════════════════════════════════════════
-let recTimer = null;
-
-function toggleMeasure() {
-  if (!state.selectedCar) {
-    alert('Seleziona prima un\'auto nella scheda AUTO');
-    return;
-  }
-  if (!state.selectedGear) {
-    alert('Seleziona la marcia di prova (tasto MARCIA)');
-    return;
-  }
-  if (!state.tireCircumference) {
-    alert('Inserisci la gommatura (tasto GOMMATURA)');
-    return;
-  }
-  if (!state.gpsActive) {
-    startGPS();
-    setTimeout(() => {
-      if (!state.gpsActive) alert('In attesa del GPS... Riprova tra qualche secondo.');
-    }, 2000);
-    return;
-  }
-
-  if (!state.measuring) {
-    state.measuring = true;
-    state.dataPoints = [];
-    state.sessionStartTime = Date.now();
-    document.getElementById('mainBtn').textContent = '⏹ FERMA MISURA';
-    document.getElementById('mainBtn').classList.remove('start');
-    document.getElementById('mainBtn').classList.add('stop');
-    document.getElementById('recIndicator').classList.add('visible');
-    recTimer = setInterval(() => {
-      const elapsed = (Date.now() - state.sessionStartTime) / 1000;
-      document.getElementById('recTime').textContent = elapsed.toFixed(1) + 's';
-    }, 100);
-    setGPSStatus('measuring');
-  } else {
-    stopMeasure();
-  }
-}
-
-function stopMeasure() {
-  state.measuring = false;
-  clearInterval(recTimer);
-  document.getElementById('mainBtn').textContent = '▶ AVVIA MISURA';
-  document.getElementById('mainBtn').classList.remove('stop');
-  document.getElementById('mainBtn').classList.add('start');
-  document.getElementById('recIndicator').classList.remove('visible');
-  setGPSStatus('active');
-
-  if (state.dataPoints.length > 5) {
-    saveRun();
-    showPage_noEvent('chart');
-  } else {
-    alert('Dati insufficienti. Accelera più a lungo (almeno 5 secondi).');
-  }
-}
-
-function showPage_noEvent(id) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('nav button').forEach((b, i) => {
+function navTo(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach((b,i)=>{
     b.classList.remove('active');
-    const pages = ['measure','chart','runs','cars'];
-    if (pages[i] === id) b.classList.add('active');
+    if(['measure','chart','runs','cars'][i]===id) b.classList.add('active');
   });
-  document.getElementById('page-' + id).classList.add('active');
-  if (id === 'chart') renderChart();
+  document.getElementById('page-'+id).classList.add('active');
+  if(id==='chart') renderChart();
 }
 
-function resetSession() {
-  state.dataPoints = [];
-  document.getElementById('gaugePower').textContent  = '—';
-  document.getElementById('gaugeTorque').textContent = '—';
-  document.getElementById('gaugeSpeed').textContent  = '0';
-  document.getElementById('gaugeRpm').textContent    = '—';
-  document.getElementById('gaugeAccel').textContent  = '0.00';
+// ═══════════════════════════════════════════════════════
+// GPS
+// ═══════════════════════════════════════════════════════
+function startGPS(){
+  if(!('geolocation' in navigator)){alert('GPS non disponibile.');return;}
+  S.watchId=navigator.geolocation.watchPosition(onGPS,onGPSErr,{
+    enableHighAccuracy:true,maximumAge:0,timeout:8000
+  });
+}
+function onGPS(pos){
+  const now=pos.timestamp,v=pos.coords.speed||0;
+  setGPSStatus(S.measuring?'measuring':'active');
+  const kmh=v*3.6;
+  let a=0;
+  if(S.lastTime){
+    const dt=(now-S.lastTime)/1000;
+    if(dt>0&&dt<2) a=(v-S.lastSpeed)/dt;
+  }
+  S.speed=v;S.lastSpeed=v;S.lastTime=now;
+
+  document.getElementById('gSpeed').textContent=kmh.toFixed(0);
+  document.getElementById('gAccel').textContent=a.toFixed(2);
+  document.getElementById('sBar').style.width=Math.min(kmh/250*100,100)+'%';
+  document.getElementById('sbarVal').textContent=kmh.toFixed(0)+' km/h';
+
+  let cv=0,torque=0,rpm=null;
+  if(S.car&&a>0.2){
+    const r=calcPower(v,a,S.car.mass);
+    cv=r.cv;torque=r.torque;rpm=r.rpm;
+    document.getElementById('gPower').textContent=cv.toFixed(0);
+    document.getElementById('gTorque').textContent=torque.toFixed(0);
+    document.getElementById('gRpm').textContent=rpm!==null?Math.round(rpm).toLocaleString('it'):'—';
+    if(S.measuring&&kmh>=20&&kmh<=280)
+      S.points.push({speed_kmh:kmh,accel:a,power_cv:cv,torque_nm:torque,rpm,t:now});
+  } else if(!S.car){
+    ['gPower','gTorque','gRpm'].forEach(id=>document.getElementById(id).textContent='—');
+  }
+
+  // Update live values (car mode pulls these)
+  S.liveKmh=kmh;S.liveCv=cv;S.liveTorque=torque;
+  // Only overwrite liveRpm from GPS if mic is not active or low confidence
+  if(!micActive||micConfidence<0.4){
+    if(rpm!==null) S.liveRpm=rpm;
+    else if(S.totalRatio&&S.wheelR) S.liveRpm=Math.max((v/S.wheelR)*S.totalRatio*60/(2*Math.PI),0);
+  }
+}
+function onGPSErr(){setGPSStatus('inactive');}
+function setGPSStatus(s){
+  const d=document.getElementById('gpsDot'),l=document.getElementById('gpsLabel');
+  d.className='gps-dot';
+  if(s==='active'){d.classList.add('active');l.textContent='GPS OK';}
+  else if(s==='measuring'){d.classList.add('measuring');l.textContent='REC';}
+  else l.textContent='NO GPS';
+  S.gpsActive=s!=='inactive';
 }
 
-// ═══════════════════════════════════════════
-// RUNS
-// ═══════════════════════════════════════════
-function saveRun() {
-  const smooth = smoothData(state.dataPoints);
-  const peaks  = getPeaks(smooth);
-  const run    = {
-    id:          Date.now(),
-    date:        new Date().toLocaleString('it-IT'),
-    car:         state.selectedCar,
-    gear:        state.selectedGear,
-    tire:        `${state.tireWidth}/${state.tireProfile} R${state.tireRim}`,
-    overallRatio: state.overallRatio,
-    points:      smooth,
-    peakPower:   peaks.power,
-    peakTorque:  peaks.torque,
-    peakSpeed:   peaks.speed,
-    duration:    (Date.now() - state.sessionStartTime) / 1000,
-  };
-  state.runs.unshift(run);
-  save();
+// ═══════════════════════════════════════════════════════
+// MEASURE
+// ═══════════════════════════════════════════════════════
+let recTmr=null;
+function toggleMeasure(){
+  if(!S.car){alert('Seleziona un\'auto nella scheda AUTO.');return;}
+  if(!S.gear){openGearModal();return;}
+  if(!S.gpsActive){startGPS();setTimeout(()=>{if(!S.gpsActive)alert('Attendendo GPS…');},2500);return;}
+  if(!S.measuring){
+    S.measuring=true;S.points=[];S.sessionT=Date.now();
+    document.getElementById('mainBtn').textContent='⏹ FERMA MISURA';
+    document.getElementById('mainBtn').className='btn-main stop';
+    document.getElementById('recInd').classList.add('vis');
+    recTmr=setInterval(()=>{
+      document.getElementById('recTime').textContent=((Date.now()-S.sessionT)/1000).toFixed(1)+'s';
+    },100);
+    setGPSStatus('measuring');
+  } else stopMeasure();
+}
+function stopMeasure(){
+  S.measuring=false;clearInterval(recTmr);
+  document.getElementById('mainBtn').textContent='▶ AVVIA MISURA';
+  document.getElementById('mainBtn').className='btn-main start';
+  document.getElementById('recInd').classList.remove('vis');
+  setGPSStatus('active');
+  if(S.points.length>5){saveRun();navTo('chart');}
+  else alert('Dati insufficienti. Accelera almeno 5 secondi.');
+}
+function resetSession(){
+  S.points=[];
+  ['gPower','gTorque','gRpm'].forEach(id=>document.getElementById(id).textContent='—');
+  document.getElementById('gSpeed').textContent='0';
+  document.getElementById('gAccel').textContent='0.00';
 }
 
-function smoothData(points) {
-  if (points.length < 3) return points;
-  const sorted = [...points].sort((a, b) => a.speed_kmh - b.speed_kmh);
-  const bins   = {};
-  for (const p of sorted) {
-    const k = Math.round(p.speed_kmh / 2) * 2;
-    if (!bins[k]) bins[k] = [];
+// ═══════════════════════════════════════════════════════
+// GEAR MODAL
+// ═══════════════════════════════════════════════════════
+function openGearModal(){
+  const c=S.car;if(!c)return;
+  const g=c.gears||[],fd=c.finalDrive||1,r=S.wheelR;
+  let html=g.map((ratio,i)=>{
+    const tot=ratio*fd;
+    let note='';
+    if(r){const vAt2k=(2000*2*Math.PI/60)/tot*r*3.6;note=` · ${vAt2k.toFixed(0)} km/h@2000rpm`;}
+    return`<div class="mg-item" onclick="selectGear(${i+1},${ratio},${tot})">
+      <div class="mg-num">${i+1}</div>
+      <div><div class="mg-rv">Rapp. ${ratio.toFixed(3)} × ${fd.toFixed(3)}</div>
+      <div class="mg-info">Totale: ${tot.toFixed(3)}${note}</div></div>
+    </div>`;
+  }).join('');
+  html+=`<div class="mg-item" onclick="openWizardModal()" style="border-color:var(--cyan)">
+    <div style="font-family:'Orbitron',sans-serif;font-size:20px;color:var(--cyan)">?</div>
+    <div><div class="mg-rv" style="color:var(--cyan)">Non conosco i rapporti</div>
+    <div class="mg-info">Calcola da RPM + velocità</div></div>
+  </div>`;
+  document.getElementById('gearModalList').innerHTML=html;
+  document.getElementById('gearModalSub').textContent=`${c.make} ${c.model} — finale: ${fd.toFixed(3)}`;
+  document.getElementById('gearOverlay').classList.add('open');
+}
+function closeGearModal(){document.getElementById('gearOverlay').classList.remove('open');}
+function selectGear(num,ratio,total){
+  S.gear=num;S.totalRatio=total;
+  closeGearModal();
+  refreshGearUI(num,ratio,total);
+  document.getElementById('cmGearNum').textContent=num;
+  if(!S.gpsActive) startGPS();
+}
+function refreshGearUI(num,ratio,total){
+  const c=S.car,row=document.getElementById('gearRow');
+  if(c&&c.gears&&c.gears.length)
+    row.innerHTML=c.gears.map((_,i)=>`<button class="gear-btn${S.gear===i+1?' sel':''}" onclick="openGearModal()">${i+1}</button>`).join('')+
+      `<button class="gear-btn unk" onclick="openGearModal()">?</button>`;
+  document.getElementById('infogear').textContent=num+'ª marcia';
+  const fd=c&&c.finalDrive?c.finalDrive.toFixed(3):'?';
+  document.getElementById('inforatio').textContent=`${total.toFixed(3)} (${ratio?ratio.toFixed(3):'wiz'} × ${fd})`;
+}
+
+// ═══════════════════════════════════════════════════════
+// WIZARD
+// ═══════════════════════════════════════════════════════
+function openWizardModal(){
+  closeGearModal();
+  document.getElementById('wizResult').style.display='none';
+  document.getElementById('wizOverlay').classList.add('open');
+}
+function closeWizardModal(){document.getElementById('wizOverlay').classList.remove('open');}
+function calcWizard(){
+  const spd=parseFloat(document.getElementById('wSpeed').value);
+  const rpm=parseFloat(document.getElementById('wRpm').value);
+  const gn=parseInt(document.getElementById('wGear').value);
+  const r=S.wheelR;
+  if(!spd||!rpm||spd<=0||rpm<=0){alert('Inserisci velocità e RPM validi.');return;}
+  if(!r){alert('Nessuna gomma configurata per questa auto.');return;}
+  const total=(rpm*2*Math.PI/60)*r/(spd/3.6);
+  const res=document.getElementById('wizResult');
+  res.style.display='block';
+  res.innerHTML=`<strong style="color:var(--green)">✓ Rapporto calcolato</strong><br/>
+    ${spd} km/h · ${rpm.toLocaleString('it')} RPM → Totale: <strong style="color:var(--cyan)">${total.toFixed(4)}</strong><br/>
+    <button class="btn-wiz" onclick="applyWizard(${gn},${total})" style="margin-top:8px">USA PER LA ${gn}ª MARCIA</button>`;
+}
+function applyWizard(gn,total){
+  S.gear=gn;S.totalRatio=total;
+  closeWizardModal();
+  const row=document.getElementById('gearRow');
+  if(S.car&&S.car.gears&&S.car.gears.length)
+    row.innerHTML=S.car.gears.map((_,i)=>`<button class="gear-btn${S.gear===i+1?' sel':''}" onclick="openGearModal()">${i+1}</button>`).join('')+
+      `<button class="gear-btn unk" onclick="openGearModal()">?</button>`;
+  document.getElementById('infogear').textContent=gn+'ª marcia (wizard)';
+  document.getElementById('inforatio').textContent=`${total.toFixed(4)} (calcolato)`;
+  document.getElementById('cmGearNum').textContent=gn;
+  if(!S.gpsActive) startGPS();
+}
+
+// ═══════════════════════════════════════════════════════
+// DATA PROCESSING
+// ═══════════════════════════════════════════════════════
+function smooth(pts){
+  if(pts.length<3) return pts;
+  const bins={};
+  for(const p of [...pts].sort((a,b)=>a.speed_kmh-b.speed_kmh)){
+    const k=Math.round(p.speed_kmh/2)*2;
+    if(!bins[k]) bins[k]=[];
     bins[k].push(p);
   }
-  const result = [];
-  const avg    = arr => arr.reduce((s, v) => s + v, 0) / arr.length;
-  for (const [k, pts] of Object.entries(bins)) {
-    result.push({
-      speed_kmh: parseFloat(k),
-      rpm:       avg(pts.map(p => p.rpm)),
-      power_cv:  avg(pts.map(p => p.power_cv)),
-      torque_nm: avg(pts.map(p => p.torque_nm)),
-      accel:     avg(pts.map(p => p.accel)),
-    });
+  const avg=a=>a.reduce((s,v)=>s+v,0)/a.length;
+  return Object.entries(bins).map(([k,p])=>({
+    speed_kmh:+k,
+    power_cv:avg(p.map(x=>x.power_cv)),
+    torque_nm:avg(p.map(x=>x.torque_nm)),
+    rpm:p[0].rpm!==null?avg(p.filter(x=>x.rpm).map(x=>x.rpm)):null,
+  })).sort((a,b)=>a.speed_kmh-b.speed_kmh);
+}
+function peaks(pts){
+  let mp=0,mt=0,ms=0,mr=0;
+  for(const p of pts){
+    if(p.power_cv>mp){mp=p.power_cv;ms=p.speed_kmh;mr=p.rpm||0;}
+    if(p.torque_nm>mt) mt=p.torque_nm;
   }
-  return result.sort((a, b) => a.speed_kmh - b.speed_kmh);
+  return{power:mp,torque:mt,speed:ms,rpm:mr};
 }
 
-function getPeaks(points) {
-  let maxP = 0, maxPW = 0, maxT = 0, maxS = 0;
-  for (const p of points) {
-    if (p.power_cv  > maxP)  { maxP  = p.power_cv;  maxS = p.speed_kmh; }
-    if ((p.power_wheel||0) > maxPW) maxPW = p.power_wheel || 0;
-    if (p.torque_nm > maxT)    maxT  = p.torque_nm;
-  }
-  return { power: maxP, powerWheel: maxPW, torque: maxT, speed: maxS };
+// ═══════════════════════════════════════════════════════
+// RUNS
+// ═══════════════════════════════════════════════════════
+function saveRun(){
+  const sm=smooth(S.points),pk=peaks(sm);
+  S.runs.unshift({
+    id:Date.now(),date:new Date().toLocaleString('it-IT'),
+    car:S.car,gear:S.gear,totalRatio:S.totalRatio,
+    points:sm,peakPower:pk.power,peakTorque:pk.torque,peakRpm:pk.rpm,
+    duration:(Date.now()-S.sessionT)/1000
+  });
+  save();
 }
-
-function renderRunList() {
-  const el = document.getElementById('runList');
-  if (state.runs.length === 0) {
-    el.innerHTML = '<div class="no-data"><div class="no-data-icon">🏁</div><p>Nessuna sessione ancora.</p></div>';
+function renderRunList(){
+  const el=document.getElementById('runList');
+  if(!S.runs.length){
+    el.innerHTML='<div class="no-data"><div class="no-data-icon">🏁</div><p>Nessuna sessione ancora.</p></div>';
     return;
   }
-  el.innerHTML = state.runs.map((r, i) => `
+  el.innerHTML=S.runs.map((r,i)=>`
     <div class="run-item" onclick="loadRun(${i})">
       <div>
-        <div class="car-name">${r.car.make} ${r.car.model}</div>
-        <div class="run-date">${r.date} · ${r.gear ? r.gear + 'ª marcia' : ''} · ${r.duration.toFixed(1)}s</div>
+        <div class="cname">${r.car.make} ${r.car.model} — ${r.gear?r.gear+'ª':'?'} marcia</div>
+        <div class="run-date">${r.date} · ${r.duration.toFixed(1)}s</div>
       </div>
-      <div>
+      <div style="text-align:right">
         <div class="run-peak">${r.peakPower.toFixed(0)} CV</div>
-        <div class="car-details" style="text-align:right">${r.peakTorque.toFixed(0)} Nm</div>
+        <div class="cdet">${r.peakTorque.toFixed(0)} Nm${r.peakRpm?' @ '+Math.round(r.peakRpm).toLocaleString('it')+' rpm':''}</div>
       </div>
-    </div>
-  `).join('');
+    </div>`).join('');
+}
+function loadRun(i){
+  const r=S.runs[i];
+  S.points=r.points;S.gear=r.gear;S.totalRatio=r.totalRatio;
+  S.car=r.car;S.wheelR=r.car.tyre?parseTyre(r.car.tyre):.31;
+  navTo('chart');
 }
 
-function loadRun(i) {
-  state.dataPoints = state.runs[i].points;
-  showPage_noEvent('chart');
-}
-
-// ═══════════════════════════════════════════
+// ═══════════════════════════════════════════════════════
 // CHART
-// ═══════════════════════════════════════════
-function renderChart() {
-  const wrap = document.getElementById('chartWrap');
-
-  if (state.dataPoints.length < 3) {
-    wrap.innerHTML = '<div class="no-data"><div class="no-data-icon">📊</div><p>Nessun dato disponibile.<br />Esegui una misurazione<br />nella scheda MISURA.</p></div>';
+// ═══════════════════════════════════════════════════════
+function renderChart(){
+  const wrap=document.getElementById('chartWrap');
+  if(S.points.length<3){
+    wrap.innerHTML='<div class="no-data"><div class="no-data-icon">📊</div><p>Nessun dato.<br/>Esegui una misurazione prima.</p></div>';
     return;
   }
-
-  const smooth = smoothData(state.dataPoints);
-  const peaks  = getPeaks(smooth);
-  const hasRpm = smooth.some(p => p.rpm > 0);
-
-  // Decide x-axis: RPM if available, else speed
-  const xLabel  = hasRpm ? 'RPM' : 'km/h';
-  const xValues = smooth.map(p => hasRpm ? p.rpm : p.speed_kmh);
-
-  wrap.innerHTML = `
-    <div class="chart-header">
-      <div>
-        <div class="chart-title">CURVA DI POTENZA</div>
-        <div class="chart-subtitle">${state.selectedCar ? state.selectedCar.make + ' ' + state.selectedCar.model : ''}</div>
-      </div>
-      <div class="peak-badges">
-        <div class="badge power">⚡ ${peaks.power.toFixed(0)} CV motore</div>
-        <div class="badge" style="background:rgba(255,107,0,0.15);color:var(--orange);border:1px solid var(--orange)">🔧 ${peaks.powerWheel.toFixed(0)} CV ruote</div>
-        <div class="badge torque">🔩 ${peaks.torque.toFixed(0)} Nm</div>
+  const sm=S.points,pk=peaks(sm);
+  const hasRpm=sm.some(p=>p.rpm&&p.rpm>0);
+  const xk=hasRpm?'rpm':'speed_kmh',xl=hasRpm?'RPM':'km/h';
+  const rpmLbl=pk.rpm?' @ '+Math.round(pk.rpm).toLocaleString('it')+' rpm':'';
+  wrap.innerHTML=`
+    <div class="chart-hdr">
+      <div><div class="chart-ttl">CURVA DI POTENZA</div>
+        <div class="chart-sub">${S.car?S.car.make+' '+S.car.model:''}${S.gear?' · '+S.gear+'ª marcia':''}</div></div>
+      <div class="badges">
+        <div class="badge bp">⚡ ${pk.power.toFixed(0)} CV${rpmLbl}</div>
+        <div class="badge bt">🔩 ${pk.torque.toFixed(0)} Nm</div>
       </div>
     </div>
     <canvas id="dynoChart"></canvas>
-    <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;font-size:10px;color:var(--muted);letter-spacing:1px;">
-      <span><span style="color:var(--red)">●</span> CV motore</span>
-      <span><span style="color:var(--orange)">●</span> CV ruote</span>
-      <span><span style="color:var(--yellow)">●</span> Coppia (Nm)</span>
-      <span style="margin-left:auto;color:var(--muted)">${xLabel}</span>
-    </div>
-  `;
-
-  const canvas = document.getElementById('dynoChart');
-  const dpr    = window.devicePixelRatio || 1;
-  canvas.width  = (canvas.offsetWidth || 340) * dpr;
-  canvas.height = 260 * dpr;
-  canvas.style.height = '260px';
-  const ctx = canvas.getContext('2d');
-  ctx.scale(dpr, dpr);
-
-  const W   = canvas.width / dpr;
-  const H   = canvas.height / dpr;
-  const pad = { top: 20, right: 20, bottom: 36, left: 52 };
-  const cW  = W - pad.left - pad.right;
-  const cH  = H - pad.top  - pad.bottom;
-
-  const powers      = smooth.map(p => p.power_cv);
-  const powersWheel = smooth.map(p => p.power_wheel || p.power_cv * 0.86);
-  const torques = smooth.map(p => p.torque_nm);
-  const minX    = Math.min(...xValues);
-  const maxX    = Math.max(...xValues);
-  const maxPwr  = Math.max(...powers) * 1.1;
-  const maxTrq  = Math.max(...torques) * 1.1;
-
-  const xScale    = x  => pad.left + ((x - minX) / (maxX - minX || 1)) * cW;
-  const yScalePwr = cv => pad.top + cH - (cv / maxPwr) * cH;
-  const yScaleTrq = nm => pad.top + cH - (nm / maxTrq) * cH;
-
-  ctx.fillStyle = '#1a1a1a';
-  ctx.fillRect(0, 0, W, H);
-
-  ctx.strokeStyle = '#2a2a2a';
-  ctx.lineWidth = 1;
-  for (let i = 0; i <= 4; i++) {
-    const y = pad.top + (cH / 4) * i;
-    ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(W - pad.right, y); ctx.stroke();
-  }
-
-  // Torque fill
-  ctx.beginPath();
-  ctx.moveTo(xScale(xValues[0]), yScaleTrq(torques[0]));
-  for (let i = 1; i < smooth.length; i++) ctx.lineTo(xScale(xValues[i]), yScaleTrq(torques[i]));
-  ctx.lineTo(xScale(xValues[smooth.length-1]), pad.top + cH);
-  ctx.lineTo(xScale(xValues[0]), pad.top + cH);
-  ctx.closePath();
-  ctx.fillStyle = 'rgba(255,208,0,0.07)';
-  ctx.fill();
-
-  // Power fill
-  ctx.beginPath();
-  ctx.moveTo(xScale(xValues[0]), yScalePwr(powers[0]));
-  for (let i = 1; i < smooth.length; i++) ctx.lineTo(xScale(xValues[i]), yScalePwr(powers[i]));
-  ctx.lineTo(xScale(xValues[smooth.length-1]), pad.top + cH);
-  ctx.lineTo(xScale(xValues[0]), pad.top + cH);
-  ctx.closePath();
-  const grad = ctx.createLinearGradient(0, pad.top, 0, pad.top + cH);
-  grad.addColorStop(0, 'rgba(255,32,32,0.3)');
-  grad.addColorStop(1, 'rgba(255,32,32,0.02)');
-  ctx.fillStyle = grad;
-  ctx.fill();
-
-  // Wheel power line
-  ctx.beginPath();
-  ctx.strokeStyle = '#ff6b00';
-  ctx.lineWidth = 1.8;
-  ctx.shadowColor = '#ff6b00';
-  ctx.shadowBlur  = 5;
-  ctx.setLineDash([5, 3]);
-  ctx.moveTo(xScale(xValues[0]), yScalePwr(powersWheel[0]));
-  for (let i = 1; i < smooth.length; i++) ctx.lineTo(xScale(xValues[i]), yScalePwr(powersWheel[i]));
-  ctx.stroke();
-  ctx.setLineDash([]);
-
-  // Torque line
-  ctx.beginPath();
-  ctx.strokeStyle = '#ffd000';
-  ctx.lineWidth = 2;
-  ctx.shadowColor = '#ffd000';
-  ctx.shadowBlur  = 6;
-  ctx.moveTo(xScale(xValues[0]), yScaleTrq(torques[0]));
-  for (let i = 1; i < smooth.length; i++) ctx.lineTo(xScale(xValues[i]), yScaleTrq(torques[i]));
-  ctx.stroke();
-
-  // Power line
-  ctx.beginPath();
-  ctx.strokeStyle = '#ff2020';
-  ctx.lineWidth = 2.5;
-  ctx.shadowColor = '#ff2020';
-  ctx.shadowBlur  = 10;
-  ctx.moveTo(xScale(xValues[0]), yScalePwr(powers[0]));
-  for (let i = 1; i < smooth.length; i++) ctx.lineTo(xScale(xValues[i]), yScalePwr(powers[i]));
-  ctx.stroke();
-  ctx.shadowBlur = 0;
-
-  // Peak marker
-  const pkIdx = powers.indexOf(Math.max(...powers));
-  if (pkIdx >= 0) {
-    ctx.beginPath();
-    ctx.arc(xScale(xValues[pkIdx]), yScalePwr(powers[pkIdx]), 5, 0, Math.PI * 2);
-    ctx.fillStyle = '#ff2020';
-    ctx.shadowColor = '#ff2020';
-    ctx.shadowBlur  = 12;
-    ctx.fill();
-    ctx.shadowBlur = 0;
-  }
-
-  // Axes labels
-  ctx.fillStyle  = '#666';
-  ctx.font       = '10px JetBrains Mono, monospace';
-  ctx.textAlign  = 'center';
-  const xSteps   = 4;
-  for (let i = 0; i <= xSteps; i++) {
-    const val = minX + ((maxX - minX) / xSteps) * i;
-    ctx.fillText(hasRpm ? (val/1000).toFixed(1)+'k' : val.toFixed(0), xScale(val), H - 10);
-  }
-  ctx.fillStyle = '#555';
-  ctx.fillText(xLabel, pad.left + cW / 2, H - 0);
-
-  ctx.textAlign  = 'right';
-  for (let i = 0; i <= 4; i++) {
-    const val = (maxPwr / 4) * (4 - i);
-    ctx.fillStyle = '#ff4040';
-    ctx.fillText(val.toFixed(0), pad.left - 4, yScalePwr(val) + 4);
-  }
-}
-
-// ═══════════════════════════════════════════
-// DRIVETRAIN LOSS TABLE
-// ═══════════════════════════════════════════
-const DRIVETRAIN_LOSS_TABLE = { RWD: 0.13, FWD: 0.14, AWD: 0.20 };
-
-function getDrivetrainLoss(car) {
-  return car ? (DRIVETRAIN_LOSS_TABLE[car.drive] || 0.15) : 0.15;
-}
-
-// ═══════════════════════════════════════════
-// PHYSICS — improved
-// ═══════════════════════════════════════════
-const G = 9.81;
-const AIR_DENSITY = 1.225; // kg/m³
-
-function calcPower(speed_ms, accel_ms2, mass_kg, tireRadius, car, slopeRad, overallRatio) {
-  const cd  = (car && car.cd)           || 0.30;
-  const A   = (car && car.frontalArea)  || 2.2;
-  const crr = (car && car.crr)          || 0.013;
-  const loss = getDrivetrainLoss(car);
-
-  // Forces
-  const F_inertia = mass_kg * accel_ms2;
-  const F_aero    = 0.5 * AIR_DENSITY * cd * A * speed_ms * speed_ms;
-  const F_roll    = crr * mass_kg * G * Math.cos(slopeRad || 0);
-  const F_slope   = mass_kg * G * Math.sin(slopeRad || 0); // + = uphill
-  const F_total   = F_inertia + F_aero + F_roll + F_slope;
-
-  const P_wheel_w  = Math.max(F_total * speed_ms, 0); // Watts at wheels
-  const P_engine_w = P_wheel_w / (1 - loss);
-  const cv_engine  = P_engine_w / 735.499;
-  const cv_wheel   = P_wheel_w  / 735.499;
-
-  // Torque at wheel (wheel radius)
-  const r = tireRadius || 0.31;
-  const torque_wheel = Math.max(F_total * r, 0);
-  // Torque at engine: wheel torque / overall gear ratio (ratio multiplies torque, so we divide)
-  // If ratio unknown, fall back to correcting only for drivetrain loss
-  const torque_engine = overallRatio && overallRatio > 0
-    ? torque_wheel / overallRatio
-    : torque_wheel / (1 - loss);
-
-  return {
-    cv_engine, cv_wheel,
-    torque_engine, torque_wheel,
-    P_engine_kw: P_engine_w / 1000,
-    P_wheel_kw:  P_wheel_w  / 1000,
-    loss_pct: loss * 100,
-    F_aero, F_roll, F_slope, F_inertia,
-  };
-}
-
-// ═══════════════════════════════════════════
-// SLOPE from altitude
-// ═══════════════════════════════════════════
-let altHistory = []; // { alt, dist } running sum
-
-function updateSlope(pos) {
-  if (!pos.coords.altitude) return 0;
-  const alt = pos.coords.altitude;
-  const spd = pos.coords.speed || 0;
-  // Estimate distance increment from speed (Δt ≈ 1s on watchPosition)
-  altHistory.push({ alt, spd });
-  if (altHistory.length > 6) altHistory.shift();
-  if (altHistory.length < 3) return 0;
-
-  // Least squares slope over recent window
-  const n = altHistory.length;
-  let sumDist = 0;
-  const pairs = [];
-  for (let i = 1; i < n; i++) {
-    sumDist += (altHistory[i].spd + altHistory[i-1].spd) / 2 * 1.0; // ~1s interval
-    pairs.push({ d: sumDist, a: altHistory[i].alt });
-  }
-  if (pairs.length < 2) return 0;
-  const x0 = pairs[0].d, a0 = pairs[0].a;
-  let num = 0, den = 0;
-  for (const p of pairs) { num += (p.d - x0) * (p.a - a0); den += (p.d - x0) ** 2; }
-  const gradient = den > 0.1 ? num / den : 0; // Δalt/Δdist
-  return Math.atan(gradient); // radians
-}
-
-// ═══════════════════════════════════════════
-// CAR DATABASE
-// ═══════════════════════════════════════════
-function renderCarList() {
-  const el = document.getElementById('carList');
-  if (state.cars.length === 0) {
-    el.innerHTML = '<div class="no-data"><p>Nessuna auto nel database.</p></div>';
-    return;
-  }
-  el.innerHTML = state.cars.map(car => {
-    const isSelected = state.selectedCar && state.selectedCar.id === car.id;
-    const loss = DRIVETRAIN_LOSS_TABLE[car.drive] || 0.15;
-    return `
-    <div class="car-item ${isSelected ? 'selected' : ''}">
-      <div style="flex:1;cursor:pointer" onclick="selectCar(${car.id})">
-        <div class="car-name">${car.make} ${car.model} <span style="color:var(--muted);font-size:10px">(${car.year})</span></div>
-        <div class="car-details">${car.drive} · perdite ${(loss*100).toFixed(0)}% · ${car.hp ? car.hp+' CV' : '—'} · ${car.numGears||'?'} marce</div>
-        <div class="car-details" style="margin-top:2px">
-          <span style="color:var(--muted)">Cd=${car.cd||'0.30'} · A=${car.frontalArea||'2.2'}m² · Crr=${car.crr||'0.013'}</span>
-        </div>
-        <div class="car-details" style="margin-top:2px;color:${car.gearRatios?'var(--green)':'var(--muted)'}">
-          ${car.gearRatios ? '✓ Rapporti presenti' : '○ Rapporti non inseriti'}
-        </div>
-      </div>
-      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
-        <div>
-          <div class="car-mass">${car.mass}</div>
-          <div class="car-mass-unit">kg</div>
-        </div>
-        <div style="display:flex;gap:6px">
-          <button onclick="editCar(${car.id})" style="padding:5px 10px;background:rgba(0,229,255,0.08);border:1px solid rgba(0,229,255,0.3);border-radius:5px;color:var(--cyan);font-size:10px;cursor:pointer;font-family:'JetBrains Mono',monospace">✏</button>
-          <button onclick="deleteCar(${car.id})" style="padding:5px 10px;background:rgba(255,32,32,0.08);border:1px solid rgba(255,32,32,0.3);border-radius:5px;color:var(--red);font-size:10px;cursor:pointer;font-family:'JetBrains Mono',monospace">✕</button>
-        </div>
-      </div>
+    <div style="display:flex;gap:16px;margin-top:10px;font-size:9px;color:var(--muted)">
+      <span><span style="color:var(--red)">●</span> POTENZA (CV)</span>
+      <span><span style="color:var(--yellow)">●</span> COPPIA (Nm)</span>
     </div>`;
-  }).join('');
+  const canvas=document.getElementById('dynoChart');
+  const dpr=window.devicePixelRatio||1;
+  canvas.width=(canvas.offsetWidth||340)*dpr;canvas.height=260*dpr;canvas.style.height='260px';
+  const ctx=canvas.getContext('2d');ctx.scale(dpr,dpr);
+  const W=canvas.width/dpr,H=canvas.height/dpr;
+  const pad={t:18,r:50,b:34,l:50},cW=W-pad.l-pad.r,cH=H-pad.t-pad.b;
+  const pts=hasRpm?sm.filter(p=>p.rpm>0):sm;
+  if(pts.length<2) return;
+  const xs=pts.map(p=>p[xk]),pw=pts.map(p=>p.power_cv),tq=pts.map(p=>p.torque_nm);
+  const minX=Math.min(...xs),maxX=Math.max(...xs),maxP=Math.max(...pw)*1.12,maxT=Math.max(...tq)*1.12;
+  const xS=x=>pad.l+((x-minX)/(maxX-minX||1))*cW;
+  const yP=v=>pad.t+cH-(v/maxP)*cH;
+  const yT=v=>pad.t+cH-(v/maxT)*cH;
+  ctx.fillStyle='#1a1a1a';ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle='#222';ctx.lineWidth=1;
+  for(let i=0;i<=4;i++){const y=pad.t+(cH/4)*i;ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(W-pad.r,y);ctx.stroke();}
+  // torque fill
+  ctx.beginPath();ctx.moveTo(xS(xs[0]),yT(tq[0]));
+  pts.forEach((_,i)=>ctx.lineTo(xS(xs[i]),yT(tq[i])));
+  ctx.lineTo(xS(xs[pts.length-1]),pad.t+cH);ctx.lineTo(xS(xs[0]),pad.t+cH);ctx.closePath();
+  ctx.fillStyle='rgba(255,208,0,.07)';ctx.fill();
+  // power fill
+  ctx.beginPath();ctx.moveTo(xS(xs[0]),yP(pw[0]));
+  pts.forEach((_,i)=>ctx.lineTo(xS(xs[i]),yP(pw[i])));
+  ctx.lineTo(xS(xs[pts.length-1]),pad.t+cH);ctx.lineTo(xS(xs[0]),pad.t+cH);ctx.closePath();
+  const g=ctx.createLinearGradient(0,pad.t,0,pad.t+cH);
+  g.addColorStop(0,'rgba(255,32,32,.3)');g.addColorStop(1,'rgba(255,32,32,.02)');
+  ctx.fillStyle=g;ctx.fill();
+  ctx.beginPath();ctx.strokeStyle='#ffd000';ctx.lineWidth=2;ctx.shadowColor='#ffd000';ctx.shadowBlur=6;
+  ctx.moveTo(xS(xs[0]),yT(tq[0]));pts.forEach((_,i)=>ctx.lineTo(xS(xs[i]),yT(tq[i])));ctx.stroke();
+  ctx.beginPath();ctx.strokeStyle='#ff2020';ctx.lineWidth=2.5;ctx.shadowColor='#ff2020';ctx.shadowBlur=10;
+  ctx.moveTo(xS(xs[0]),yP(pw[0]));pts.forEach((_,i)=>ctx.lineTo(xS(xs[i]),yP(pw[i])));ctx.stroke();ctx.shadowBlur=0;
+  const pi=pw.indexOf(Math.max(...pw));
+  if(pi>=0){ctx.beginPath();ctx.arc(xS(xs[pi]),yP(pw[pi]),5,0,Math.PI*2);ctx.fillStyle='#ff2020';ctx.shadowColor='#ff2020';ctx.shadowBlur=14;ctx.fill();ctx.shadowBlur=0;}
+  ctx.fillStyle='#555';ctx.font='9px JetBrains Mono,monospace';ctx.textAlign='center';
+  for(let i=0;i<=4;i++){const x=minX+((maxX-minX)/4)*i;ctx.fillText(hasRpm?Math.round(x).toLocaleString('it'):x.toFixed(0),xS(x),H-10);}
+  ctx.fillStyle='#444';ctx.fillText(xl,pad.l+cW/2,H);
+  ctx.textAlign='right';for(let i=0;i<=4;i++){const v=(maxP/4)*(4-i);ctx.fillStyle='#ff4040';ctx.fillText(v.toFixed(0),pad.l-4,yP(v)+4);}
+  ctx.textAlign='left';for(let i=0;i<=4;i++){const v=(maxT/4)*(4-i);ctx.fillStyle='#aa8800';ctx.fillText(v.toFixed(0),W-pad.r+4,yT(v)+4);}
 }
 
-function selectCar(id) {
-  state.selectedCar = state.cars.find(c => c.id === id);
+// ═══════════════════════════════════════════════════════
+// CARS
+// ═══════════════════════════════════════════════════════
+function buildGearInputs(){
+  const w=document.getElementById('gearInputs');if(!w)return;w.innerHTML='';
+  for(let i=1;i<=MAX_G;i++)
+    w.innerHTML+=`<div class="grrow"><div class="grlbl">${i}ª</div><input type="number" step="0.001" id="r${i}" placeholder="es. ${(4.5/i).toFixed(3)}"/></div>`;
+}
+function renderCarList(){
+  const el=document.getElementById('carList');
+  el.innerHTML=S.cars.map(c=>`
+    <div class="car-item${S.car&&S.car.id===c.id?' sel':''}" onclick="selectCar(${c.id})">
+      <div>
+        <div class="cname">${c.make} ${c.model} <span style="color:var(--muted);font-size:9px">(${c.year})</span></div>
+        <div class="cdet">${c.drive}${c.hp?' · '+c.hp+' CV':''}${c.tyre?' · '+c.tyre:''} · ${(c.gears||[]).length} marce</div>
+      </div>
+      <div style="text-align:right"><div class="cmass">${c.mass}</div><div class="cmass-u">kg</div></div>
+    </div>`).join('')||'<div class="no-data"><p>Nessuna auto.</p></div>';
+}
+function selectCar(id){
+  S.car=S.cars.find(c=>c.id===id);S.gear=null;S.totalRatio=null;
+  S.wheelR=S.car.tyre?parseTyre(S.car.tyre):.31;
   renderCarList();
-  const loss = getDrivetrainLoss(state.selectedCar);
-  document.getElementById('selectedCarInfo').textContent =
-    state.selectedCar ? `${state.selectedCar.make} ${state.selectedCar.model} · ${state.selectedCar.mass} kg` : 'Nessuna';
-  document.getElementById('infoDrivetrainLoss').textContent =
-    `${(loss*100).toFixed(0)}% (${state.selectedCar.drive})`;
-  const cd = state.selectedCar.cd || 0.30;
-  const fa = state.selectedCar.frontalArea || 2.2;
-  document.getElementById('infoAero').textContent = `Cd=${cd} · A=${fa}m²`;
-  state.selectedGear  = null;
-  state.overallRatio  = null;
-  updateTestConfigUI();
-  save();
-  if (!state.gpsActive) startGPS();
+  document.getElementById('infocar').textContent=`${S.car.make} ${S.car.model} · ${S.car.mass} kg`;
+  document.getElementById('infogear').textContent='— premi una marcia';
+  document.getElementById('inforatio').textContent='—';
+  const tyreR=parseTyre(S.car.tyre||'');
+  document.getElementById('infotyre').textContent=S.car.tyre&&tyreR?`${S.car.tyre} → r=${tyreR.toFixed(4)} m`:'N/D';
+  const row=document.getElementById('gearRow');
+  if(S.car.gears&&S.car.gears.length)
+    row.innerHTML=S.car.gears.map((_,i)=>`<button class="gear-btn" onclick="openGearModal()">${i+1}</button>`).join('')+
+      `<button class="gear-btn unk" onclick="openGearModal()">?</button>`;
+  else
+    row.innerHTML=`<button class="gear-btn unk" style="padding:7px 18px" onclick="openGearModal()">SELEZIONA MARCIA</button>`;
+  if(!S.gpsActive) startGPS();
+}
+function addCar(){
+  const make=document.getElementById('cMake').value.trim();
+  const model=document.getElementById('cModel').value.trim();
+  const year=parseInt(document.getElementById('cYear').value)||new Date().getFullYear();
+  const mass=parseFloat(document.getElementById('cMass').value);
+  const hp=parseInt(document.getElementById('cHp').value)||null;
+  const drive=document.getElementById('cDrive').value;
+  const cyl=parseInt(document.getElementById('cCyl').value)||4;
+  const tyre=document.getElementById('cTyre').value.trim();
+  const fd=parseFloat(document.getElementById('rFinal').value)||null;
+  if(!make||!model||!mass||mass<300){alert('Compila: Marca, Modello, Massa (min 300 kg)');return;}
+  if(tyre&&!parseTyre(tyre)){alert('Formato gomma non valido. Usa es. 225/45R17');return;}
+  const gears=[];
+  for(let i=1;i<=MAX_G;i++){const v=parseFloat(document.getElementById('r'+i).value);if(v>0)gears.push(v);}
+  S.cars.push({id:Date.now(),make,model,year,mass,hp,drive,tyre,finalDrive:fd,gears,cylinders:cyl});
+  save();renderCarList();
+  ['cMake','cModel','cYear','cMass','cHp','cTyre','rFinal'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('cCyl').value='4';
+  for(let i=1;i<=MAX_G;i++) document.getElementById('r'+i).value='';
+  alert(`${make} ${model} aggiunta!`);
 }
 
-function deleteCar(id) {
-  const car = state.cars.find(c => c.id === id);
-  if (!car) return;
-  if (!confirm(`Eliminare ${car.make} ${car.model} dal database?`)) return;
-  state.cars = state.cars.filter(c => c.id !== id);
-  if (state.selectedCar && state.selectedCar.id === id) {
-    state.selectedCar = null;
-    state.selectedGear = null;
-    state.overallRatio = null;
-    updateTestConfigUI();
-    document.getElementById('selectedCarInfo').textContent = 'Nessuna — vai su AUTO';
-  }
-  save();
-  renderCarList();
+// ═══════════════════════════════════════════════════════
+// CAR MODE
+// ═══════════════════════════════════════════════════════
+function openCarMode(){
+  if(!S.car){alert('Seleziona prima un\'auto nella scheda AUTO.');return;}
+  if(!S.gpsActive) startGPS();
+  document.getElementById('carModeScreen').classList.add('open');
+  carModeOpen=true;
+  // Try to lock landscape (works on Android tablets with installed PWA)
+  try{ if(screen.orientation&&screen.orientation.lock) screen.orientation.lock('landscape').catch(()=>{}); }catch(e){}
+  // Keep screen awake
+  if(navigator.wakeLock) navigator.wakeLock.request('screen').catch(()=>{});
+  setTimeout(()=>{ initTacho(); tachoLoop(); },80);
+}
+function closeCarMode(){
+  document.getElementById('carModeScreen').classList.remove('open');
+  carModeOpen=false;
+  if(tachoRAF){cancelAnimationFrame(tachoRAF);tachoRAF=null;}
+  if(micActive) stopMic();
+  try{ if(screen.orientation&&screen.orientation.unlock) screen.orientation.unlock(); }catch(e){}
 }
 
-// ── EDIT CAR ──
-let editingCarId = null;
-
-function editCar(id) {
-  const car = state.cars.find(c => c.id === id);
-  if (!car) return;
-  editingCarId = id;
-
-  // Fill the add-car form with existing values
-  document.getElementById('carMake').value        = car.make;
-  document.getElementById('carModel').value       = car.model;
-  document.getElementById('carYear').value        = car.year;
-  document.getElementById('carMass').value        = car.mass;
-  document.getElementById('carDrive').value       = car.drive;
-  document.getElementById('carHp').value          = car.hp || '';
-  document.getElementById('carCd').value          = car.cd || '';
-  document.getElementById('carFrontalArea').value = car.frontalArea || '';
-  document.getElementById('carCrr').value         = car.crr || '';
-  document.getElementById('numGearsSelect').value = car.numGears || 6;
-  document.getElementById('finalDriveInput').value= car.finalDrive || '';
-  renderGearRatioInputs();
-  if (car.gearRatios) {
-    car.gearRatios.forEach((r, i) => {
-      const el = document.getElementById('gr' + (i+1));
-      if (el) el.value = r;
-    });
-  }
-  // Change button text
-  document.getElementById('addCarBtn').textContent = 'SALVA MODIFICHE';
-  document.getElementById('addCarBtn').style.background = 'rgba(255,208,0,0.1)';
-  document.getElementById('addCarBtn').style.borderColor = 'var(--yellow)';
-  document.getElementById('addCarBtn').style.color = 'var(--yellow)';
-  // Scroll to form
-  document.getElementById('addCarBtn').scrollIntoView({ behavior: 'smooth' });
+function initTacho(){
+  const canvas=document.getElementById('tachoCanvas');
+  const dpr=window.devicePixelRatio||1;
+  // Use actual rendered size (important on high-DPI tablets)
+  const rect=canvas.getBoundingClientRect();
+  const size=Math.max(rect.width,rect.height,100);
+  canvas.width=Math.round(size*dpr);
+  canvas.height=Math.round(size*dpr);
 }
 
-function addCar() {
-  const make  = document.getElementById('carMake').value.trim();
-  const model = document.getElementById('carModel').value.trim();
-  const year  = parseInt(document.getElementById('carYear').value) || new Date().getFullYear();
-  const mass  = parseFloat(document.getElementById('carMass').value);
-  const drive = document.getElementById('carDrive').value;
-  const hp    = parseInt(document.getElementById('carHp').value) || null;
-  const cd    = parseFloat(document.getElementById('carCd').value) || null;
-  const fa    = parseFloat(document.getElementById('carFrontalArea').value) || null;
-  const crr   = parseFloat(document.getElementById('carCrr').value) || null;
-  const numG  = parseInt(document.getElementById('numGearsSelect').value) || 6;
-  const fd    = parseFloat(document.getElementById('finalDriveInput').value) || null;
+function redrawTacho(){drawTacho(smoothedRpm);}
 
-  if (!make || !model || !mass || mass < 300) {
-    alert('Compila almeno: Marca, Modello e Massa (min 300 kg)');
-    return;
-  }
-
-  const ratios = [];
-  for (let g = 1; g <= numG; g++) {
-    const v = parseFloat(document.getElementById('gr' + g)?.value);
-    if (v) ratios.push(v);
-  }
-
-  if (editingCarId) {
-    // Update existing
-    const idx = state.cars.findIndex(c => c.id === editingCarId);
-    if (idx >= 0) {
-      state.cars[idx] = { ...state.cars[idx], make, model, year, mass, drive, hp,
-        cd, frontalArea: fa, crr, numGears: numG, finalDrive: fd,
-        gearRatios: ratios.length === numG ? ratios : state.cars[idx].gearRatios };
-      if (state.selectedCar && state.selectedCar.id === editingCarId) {
-        state.selectedCar = state.cars[idx];
-        selectCar(editingCarId);
-      }
-    }
-    editingCarId = null;
-    document.getElementById('addCarBtn').textContent = 'AGGIUNGI AL DATABASE';
-    document.getElementById('addCarBtn').style.background = '';
-    document.getElementById('addCarBtn').style.borderColor = '';
-    document.getElementById('addCarBtn').style.color = '';
-  } else {
-    state.cars.push({
-      id: Date.now(), make, model, year, mass, drive, hp,
-      cd, frontalArea: fa, crr,
-      numGears: numG, finalDrive: fd,
-      gearRatios: ratios.length === numG ? ratios : null,
-    });
-  }
-
-  save();
-  renderCarList();
-
-  ['carMake','carModel','carYear','carMass','carHp','finalDriveInput','carCd','carFrontalArea','carCrr'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.value = '';
-  });
-  for (let g = 1; g <= numG; g++) {
-    const el = document.getElementById('gr' + g);
-    if (el) el.value = '';
-  }
-  alert(editingCarId ? 'Auto aggiornata!' : `${make} ${model} aggiunta al database!`);
+function tachoLoop(){
+  if(!carModeOpen) return;
+  // Smooth needle
+  const target=S.liveRpm||0;
+  smoothedRpm+=(target-smoothedRpm)*0.18;
+  drawTacho(smoothedRpm);
+  // Update numeric gauges
+  document.getElementById('cmRpmVal').textContent=Math.round(smoothedRpm).toLocaleString('it');
+  document.getElementById('cmSpeed').textContent=S.liveKmh.toFixed(0);
+  document.getElementById('cmPower').textContent=S.liveCv>0?S.liveCv.toFixed(0):'—';
+  document.getElementById('cmTorque').textContent=S.liveTorque>0?S.liveTorque.toFixed(0):'—';
+  if(S.gear) document.getElementById('cmGearNum').textContent=S.gear;
+  tachoRAF=requestAnimationFrame(tachoLoop);
 }
 
-function renderGearRatioInputs() {
-  const n   = parseInt(document.getElementById('numGearsSelect').value) || 6;
-  const div = document.getElementById('gearRatioInputs');
-  let html  = '';
-  for (let i = 1; i <= n; i += 2) {
-    html += '<div class="form-row-2">';
-    for (let g = i; g <= Math.min(i+1, n); g++) {
-      html += `<div>
-        <label>${g}ª marcia</label>
-        <input type="number" id="gr${g}" placeholder="es. ${(3.5 - g * 0.35).toFixed(3)}" step="0.001" min="0.3" max="8" />
-      </div>`;
-    }
-    html += '</div>';
-  }
-  div.innerHTML = html;
-}
+function drawTacho(rpm){
+  const canvas=document.getElementById('tachoCanvas');
+  if(!canvas) return;
+  const dpr=window.devicePixelRatio||1;
+  const ctx=canvas.getContext('2d');
+  const W=canvas.width/dpr,H=canvas.height/dpr;
+  const cx=W/2,cy=H/2,R=Math.min(W,H)/2-6;
 
-// ═══════════════════════════════════════════
-// INIT
-// ═══════════════════════════════════════════
-load();
-renderCarList();
-renderGearRatioInputs();
+  const maxRpm=parseInt(document.getElementById('rpmMax')?.value)||8000;
+  const redline=parseInt(document.getElementById('rpmRedline')?.value)||7000;
+  // Sweep: 225° from bottom-left to bottom-right
+  const startA=Math.PI*0.75;
+  const sweep=Math.PI*1.5;
 
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').catch(() => {});
-}
+  ctx.clearRect(0,0,W,H);
 
-// ═══════════════════════════════════════════
-// SAFETY OVERLAY
-// ═══════════════════════════════════════════
-(function(){
-  const overlay = document.getElementById('safetyOverlay');
-  document.body.insertAdjacentHTML('afterbegin', `
-<!-- ════════════════════════════════════
-     SAFETY OVERLAY
-═════════════════════════════════════ -->
-<div id="safetyOverlay">
-  <div class="safety-card">
-    <div class="safety-title">⚠ ATTENZIONE</div>
-    <div class="safety-text">
-      Questa applicazione è destinata esclusivamente all’uso in condizioni sicure e legali.<br/><br/>
-      Non utilizzare il telefono durante la guida.<br/><br/>
-      Interagisci con l’app solo da fermo oppure tramite display compatibili montati sul veicolo.<br/><br/>
-      Rispetta sempre il codice della strada e presta attenzione all’ambiente circostante.
-    </div>
+  // Outer ring
+  ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);
+  const bgGrad=ctx.createRadialGradient(cx,cy,R*0.6,cx,cy,R);
+  bgGrad.addColorStop(0,'#0d0d0d');bgGrad.addColorStop(1,'#050505');
+  ctx.fillStyle=bgGrad;ctx.fill();
+  ctx.strokeStyle='#1a1a1a';ctx.lineWidth=3;ctx.stroke();
 
-    <div class="safety-check-row">
-      <input type="checkbox" id="safetyCheck" />
-      <label for="safetyCheck">
-        Ho letto e compreso l’avviso di sicurezza.
-      </label>
-    </div>
+  // Track background
+  ctx.beginPath();ctx.arc(cx,cy,R-12,startA,startA+sweep);
+  ctx.strokeStyle='#151515';ctx.lineWidth=16;ctx.lineCap='butt';ctx.stroke();
 
-    <button id="safetyContinueBtn" disabled>CONTINUA</button>
-  </div>
-</div>
-`);
-
-  const check = document.getElementById('safetyCheck');
-  const btn = document.getElementById('safetyContinueBtn');
-
-  if(localStorage.getItem('gpsdynoSafetyAccepted') === '1'){
-    document.getElementById('safetyOverlay').style.display = 'none';
+  // Colored arc segments
+  const segCount=200;
+  for(let i=0;i<segCount;i++){
+    const t=i/segCount;
+    const rpmAtT=t*maxRpm;
+    const a0=startA+sweep*t;
+    const a1=startA+sweep*(i+1)/segCount;
+    let color;
+    if(rpmAtT<redline*0.6)      color=`rgba(0,180,80,0.8)`;
+    else if(rpmAtT<redline*0.85) color=`rgba(200,160,0,0.85)`;
+    else if(rpmAtT<redline)      color=`rgba(255,100,0,0.9)`;
+    else                          color=`rgba(255,20,20,${rpm>=rpmAtT?1:0.3})`;
+    ctx.beginPath();ctx.arc(cx,cy,R-12,a0,a1+0.01);
+    ctx.strokeStyle=color;ctx.lineWidth=16;ctx.lineCap='butt';ctx.stroke();
   }
 
-  check.addEventListener('change', ()=>{
-    btn.disabled = !check.checked;
-    btn.classList.toggle('enabled', check.checked);
-  });
+  // Redline glow when over
+  if(rpm>=redline){
+    ctx.beginPath();ctx.arc(cx,cy,R-12,startA+sweep*(redline/maxRpm),startA+sweep);
+    ctx.strokeStyle='rgba(255,20,20,0.5)';ctx.lineWidth=6;
+    ctx.shadowColor='#ff2020';ctx.shadowBlur=20;ctx.stroke();ctx.shadowBlur=0;
+  }
 
-  btn.addEventListener('click', ()=>{
-    if(!check.checked) return;
-    localStorage.setItem('gpsdynoSafetyAccepted', '1');
-    document.getElementById('safetyOverlay').style.display = 'none';
-  });
-})();
-
-// ═══════════════════════════════════════════
-// CAR MODE TACHOMETER
-// ═══════════════════════════════════════════
-let carModeMicActive = false;
-let displayedTachRpm = 0;
-let tachRedline = 8000;
-
-const tachCanvas = document.getElementById('tachCanvas');
-const tachCtx = tachCanvas.getContext('2d');
-
-function drawTach(){
-  const ctx = tachCtx;
-  const w = tachCanvas.width;
-  const h = tachCanvas.height;
-
-  ctx.clearRect(0,0,w,h);
-
-  const cx = w/2;
-  const cy = h/2;
-  const radius = 250;
-
-  ctx.beginPath();
-  ctx.arc(cx, cy, radius, Math.PI*0.75, Math.PI*0.25, false);
-  ctx.lineWidth = 30;
-  ctx.strokeStyle = '#1b1b1b';
-  ctx.stroke();
-
-  for(let i=0;i<=9000;i+=500){
-    const t = i/9000;
-    const angle = Math.PI*0.75 + Math.PI*1.5*t;
-
+  // Tick marks + labels
+  const steps=maxRpm/500;
+  for(let i=0;i<=steps;i++){
+    const t=i/steps;
+    const angle=startA+sweep*t;
+    const rpmTick=(maxRpm/steps)*i;
+    const major=i%2===0;
+    const rIn=R-(major?30:20);
+    const rOut=R-14;
     ctx.beginPath();
-    ctx.lineWidth = i >= tachRedline ? 8 : 5;
-    ctx.strokeStyle = i >= tachRedline ? '#ff3030' : '#00ff88';
-
-    const r1 = radius - 10;
-    const r2 = radius + 10;
-
-    ctx.moveTo(cx + Math.cos(angle)*r1, cy + Math.sin(angle)*r1);
-    ctx.lineTo(cx + Math.cos(angle)*r2, cy + Math.sin(angle)*r2);
-    ctx.stroke();
+    ctx.moveTo(cx+Math.cos(angle)*rIn,cy+Math.sin(angle)*rIn);
+    ctx.lineTo(cx+Math.cos(angle)*rOut,cy+Math.sin(angle)*rOut);
+    ctx.strokeStyle=rpmTick>=redline?'#ff4040':'#555';
+    ctx.lineWidth=major?2:1;ctx.lineCap='round';ctx.stroke();
+    if(major){
+      const lR=R-46;
+      ctx.font=`bold ${Math.max(10,Math.round(R/13))}px JetBrains Mono,monospace`;
+      ctx.fillStyle=rpmTick>=redline?'#ff5555':'#888';
+      ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText((rpmTick/1000).toFixed(0),cx+Math.cos(angle)*lR,cy+Math.sin(angle)*lR);
+    }
   }
 
-  displayedTachRpm += ((parseFloat(document.getElementById('gaugeRpm').textContent) || 0) - displayedTachRpm) * 0.12;
-
-  const rpmNorm = Math.min(displayedTachRpm / 9000, 1);
-  const needleAngle = Math.PI*0.75 + Math.PI*1.5*rpmNorm;
-
+  // Needle
+  const cRpm=Math.min(Math.max(rpm,0),maxRpm);
+  const needleA=startA+sweep*(cRpm/maxRpm);
+  const nLen=R-22,nW=5;
   ctx.save();
-  ctx.translate(cx, cy);
-  ctx.rotate(needleAngle);
-
+  ctx.translate(cx,cy);ctx.rotate(needleA);
+  // Shadow
+  ctx.shadowColor='rgba(255,30,30,.6)';ctx.shadowBlur=14;
   ctx.beginPath();
-  ctx.moveTo(-20,0);
-  ctx.lineTo(200,0);
-  ctx.lineWidth = 8;
-  ctx.strokeStyle = '#ff3030';
-  ctx.shadowBlur = 25;
-  ctx.shadowColor = '#ff3030';
-  ctx.stroke();
-
+  ctx.moveTo(-14,nW*0.4);ctx.lineTo(nLen,0);ctx.lineTo(-14,-nW*0.4);ctx.closePath();
+  const needleColor=cRpm>=redline?'#ff0000':'#ff3333';
+  ctx.fillStyle=needleColor;ctx.fill();
+  ctx.shadowBlur=0;
   ctx.restore();
 
-  ctx.beginPath();
-  ctx.arc(cx, cy, 14, 0, Math.PI*2);
-  ctx.fillStyle = '#fff';
-  ctx.fill();
+  // Center hub
+  ctx.beginPath();ctx.arc(cx,cy,14,0,Math.PI*2);
+  ctx.fillStyle='#111';ctx.fill();
+  ctx.strokeStyle='#2a2a2a';ctx.lineWidth=2;ctx.stroke();
+  ctx.beginPath();ctx.arc(cx,cy,6,0,Math.PI*2);
+  ctx.fillStyle=cRpm>=redline?'#ff0000':'#ff3333';
+  ctx.shadowColor='#ff3333';ctx.shadowBlur=cRpm>=redline?16:4;
+  ctx.fill();ctx.shadowBlur=0;
 
-  document.getElementById('carModeSpeed').textContent = document.getElementById('gaugeSpeed').textContent;
-  document.getElementById('carModePower').textContent = document.getElementById('gaugePower').textContent;
-  document.getElementById('carModeTorque').textContent = document.getElementById('gaugeTorque').textContent;
-  document.getElementById('carModeRpm').textContent = 'RPM: ' + Math.round(displayedTachRpm);
-  document.getElementById('carModeGear').textContent = state.selectedGear || 'N';
-
-  requestAnimationFrame(drawTach);
+  // Inner decorative ring
+  ctx.beginPath();ctx.arc(cx,cy,R*0.38,0,Math.PI*2);
+  ctx.strokeStyle='#181818';ctx.lineWidth=1;ctx.stroke();
 }
 
-drawTach();
-
-// ═══════════════════════════════════════════
-// MICROPHONE RPM DETECTION
-// ═══════════════════════════════════════════
-async function toggleMicDetection(){
-
-  if(carModeMicActive){
-    carModeMicActive = false;
-    document.getElementById('carModeMic').textContent = '🎤 MIC OFF';
-    return;
+// ═══════════════════════════════════════════════════════
+// RESIZE HANDLER — reinit tacho canvas on orientation change
+// ═══════════════════════════════════════════════════════
+window.addEventListener('resize',()=>{
+  if(carModeOpen){
+    setTimeout(()=>{
+      initTacho();
+      drawTacho(smoothedRpm);
+    },100);
   }
-
-  try{
-
-    const stream = await navigator.mediaDevices.getUserMedia({audio:true});
-
-    const audioContext = new AudioContext();
-    const source = audioContext.createMediaStreamSource(stream);
-
-    const analyser = audioContext.createAnalyser();
-    analyser.fftSize = 4096;
-
-    source.connect(analyser);
-
-    const buffer = new Uint8Array(analyser.frequencyBinCount);
-
-    carModeMicActive = true;
-
-    document.getElementById('carModeMic').textContent = '🎤 MIC ACTIVE';
-
-    function analyze(){
-
-      if(!carModeMicActive) return;
-
-      analyser.getByteFrequencyData(buffer);
-
-      let peak = 0;
-      let peakIndex = 0;
-
-      for(let i=0;i<buffer.length;i++){
-        if(buffer[i] > peak){
-          peak = buffer[i];
-          peakIndex = i;
-        }
-      }
-
-      const freq = peakIndex * audioContext.sampleRate / analyser.fftSize;
-
-      // RPM estimation placeholder
-      // will later be replaced by calibrated mapping
-      const estimatedRpm = Math.max(800, Math.min(freq * 35, 9000));
-
-      if(!state.overallRatio && estimatedRpm){
-        document.getElementById('gaugeRpm').textContent = Math.round(estimatedRpm);
-      }
-
-      // Automatic gear estimation
-      if(state.selectedCar && state.selectedCar.gearRatios && state.selectedCar.finalDrive && state.tireCircumference && state.speed > 3){
-
-        let bestGear = null;
-        let bestError = Infinity;
-
-        state.selectedCar.gearRatios.forEach((gr, idx)=>{
-
-          const overall = gr * state.selectedCar.finalDrive;
-
-          const theoretical =
-            calcRpm(state.speed, overall, state.tireCircumference);
-
-          const error = Math.abs(theoretical - estimatedRpm);
-
-          if(error < bestError){
-            bestError = error;
-            bestGear = idx + 1;
-          }
-
-        });
-
-        if(bestGear){
-          state.selectedGear = bestGear;
-          state.overallRatio =
-            state.selectedCar.gearRatios[bestGear - 1] *
-            state.selectedCar.finalDrive;
-
-          updateTestConfigUI();
-        }
-
-      }
-
-      requestAnimationFrame(analyze);
-    }
-
-    analyze();
-
-  }catch(e){
-    alert('Microfono non disponibile.');
-  }
-}
-
+});
 </script>
 </body>
 </html>
